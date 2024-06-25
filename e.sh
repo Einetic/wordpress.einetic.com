@@ -297,19 +297,22 @@ fix_wp() {
 	directory_path="$1"
 	domain_name=$(basename "$directory_path")
 	user_name=$(generate_username "$domain_name")
-	
+	echo "Fixing ${domain_name}"
 	if [ -d "${directory_path}wp-content/updraft" ]; then
     	rm -rf "${directory_path}wp-content/updraft"
-		echo "Fixed ${domain_name}"
 	fi
-	unzip -q "/home/ubuntu/wordpress-6.5.3.zip" -d /home/ubuntu/tmp
+	if [ -d "${directory_path}wp-content/aiowps_backups" ]; then
+    	rm -rf "${directory_path}wp-content/aiowps_backups"
+	fi
+	unzip -q "/home/ubuntu/wordpress-6.5.5.zip" -d /home/ubuntu/tmp
 	rm -rf /home/ubuntu/tmp/wordpress/wp-content
 	find "$directory_path" -mindepth 1 -maxdepth 1 ! -name 'wp-content' ! -name 'wp-config.php' -exec rm -rf {} +
 	mv -f /home/ubuntu/tmp/wordpress/* $directory_path
 	rm -rf /home/ubuntu/tmp/wordpress
 	chown -R $user_name:$user_name /home/$user_name/htdocs/${domain_name}/
 	find /home/$user_name/ -type d -exec chmod 770 {} \;
-	find /home/$user_name/ -type f -exec chmod 660 {} \;	
+	find /home/$user_name/ -type f -exec chmod 660 {} \;
+	echo "Done."	
 }
 
 fix_all_wp() {
