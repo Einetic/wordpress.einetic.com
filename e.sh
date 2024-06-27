@@ -298,12 +298,28 @@ fix_wp() {
 	domain_name=$(basename "$directory_path")
 	user_name=$(generate_username "$domain_name")
 	echo "Fixing ${domain_name}"
+	if [ -d "${directory_path}wp-content/wphb-cache" ]; then
+    	rm -rf "${directory_path}wp-content/wphb-cache"
+	fi
+	if [ -d "${directory_path}wp-content/wphb-logs" ]; then
+    	rm -rf "${directory_path}wp-content/wphb-logs"
+	fi
 	if [ -d "${directory_path}wp-content/updraft" ]; then
     	rm -rf "${directory_path}wp-content/updraft"
 	fi
 	if [ -d "${directory_path}wp-content/aiowps_backups" ]; then
     	rm -rf "${directory_path}wp-content/aiowps_backups"
 	fi
+	if [ -f "${directory_path}wp-content/debug.log" ]; then
+    	rm -rf "${directory_path}wp-content/debug.log"
+	fi
+	if [ -d "${directory_path}wp-content/backup-migration" ]; then
+    	rm -rf "${directory_path}wp-content/backup-migration"
+	fi
+	if [ -f "${directory_path}wp-content/backup-migration-config.php" ]; then
+    	rm -rf "${directory_path}wp-content/backup-migration-config.php"
+	fi
+
 	unzip -q "/home/ubuntu/wordpress-6.5.5.zip" -d /home/ubuntu/tmp
 	rm -rf /home/ubuntu/tmp/wordpress/wp-content
 	find "$directory_path" -mindepth 1 -maxdepth 1 ! -name 'wp-content' ! -name 'wp-config.php' -exec rm -rf {} +
@@ -340,7 +356,7 @@ fix_all_wp() {
 # Main menu function
 main_menu() {
 	clear
-    echo "===== Main Menu ====="
+    echo "===== Main Menu v0.0.1====="
     echo "1. List websites"
     echo "2. New website"
     echo "3. Backup all"
