@@ -143,7 +143,7 @@ restore_backup() {
 		echo "Restoring Backup"
 		clpctl site:add:php --domainName="$domain_name" --phpVersion=8.3 --vhostTemplate='WordPress' --siteUser="$user_name" --siteUserPassword="$user_password"
 		clpctl db:add --domainName="$domain_name" --databaseName="$user_name" --databaseUserName="$user_name" --databaseUserPassword="$user_password"
-		unzip -q "/home/ubuntu/wordpress-6.5.3.zip" -d /home/ubuntu
+		unzip -q "/home/ubuntu/wordpress-6.5.5.zip" -d /home/ubuntu
 		mv -f /home/ubuntu/wordpress/* /home/$user_name/htdocs/$domain_name/
 		rm -rf /home/ubuntu/wordpress
 		rm -rf /home/$user_name/htdocs/${domain_name}/wp-content/*
@@ -309,6 +309,9 @@ fix_wp() {
 	fi
 	if [ -d "${directory_path}wp-content/aiowps_backups" ]; then
     	rm -rf "${directory_path}wp-content/aiowps_backups"
+	fi
+	if [ -d "${directory_path}wp-content/ai1wm-backups" ]; then
+    	rm -rf "${directory_path}wp-content/ai1wm-backups"
 	fi
 	if [ -f "${directory_path}wp-content/debug.log" ]; then
     	rm -rf "${directory_path}wp-content/debug.log"
