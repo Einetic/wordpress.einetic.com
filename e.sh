@@ -310,9 +310,6 @@ fix_wp() {
 	if [ -d "${directory_path}wp-content/aiowps_backups" ]; then
     	rm -rf "${directory_path}wp-content/aiowps_backups"
 	fi
-	if [ -d "${directory_path}wp-content/ai1wm-backups" ]; then
-    	rm -rf "${directory_path}wp-content/ai1wm-backups"
-	fi
 	if [ -f "${directory_path}wp-content/debug.log" ]; then
     	rm -rf "${directory_path}wp-content/debug.log"
 	fi
