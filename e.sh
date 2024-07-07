@@ -352,6 +352,7 @@ fix_all_wp() {
 
 
 # Main menu function
+# sed -i 's/\r$//' e.sh
 main_menu() {
 	clear
     echo "===== Main Menu v0.0.1====="
