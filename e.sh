@@ -31,8 +31,6 @@ upload_backup() {
     curl  -# -X POST -F "domain=$domain_name" -F "file=@$zip_filename"  --max-time 7200 --connect-timeout 300 --limit-rate 10M --retry 5 --expect100-timeout 60 "$url"
 	echo "Done"
 	rm "$zip_filename"
-#	read -p "Press any key to continue" choice
-#	manage_websites
 }
 
 # Function to take backup
@@ -47,8 +45,8 @@ take_backup() {
 	echo "Zipping..."
 	zip -qr "$zip_filename" "$zip_folder" "$database_filename"
 	rm "$database_filename"
-	upload_backup "$domain_name" "$zip_filename"
-#	mv "$zip_filename" "/home/ubuntu/wp-backup"
+#	upload_backup "$domain_name" "$zip_filename"
+	mv "$zip_filename" "/home/ubuntu/wp-backup"
 }
 
 take_all_backup() {
@@ -299,25 +297,25 @@ fix_wp() {
 	user_name=$(generate_username "$domain_name")
 	echo "Fixing ${domain_name}"
 	if [ -d "${directory_path}wp-content/wphb-cache" ]; then
-    	rm -rf "${directory_path}wp-content/wphb-cache"
+	    	rm -rf "${directory_path}wp-content/wphb-cache"
 	fi
 	if [ -d "${directory_path}wp-content/wphb-logs" ]; then
-    	rm -rf "${directory_path}wp-content/wphb-logs"
+	    	rm -rf "${directory_path}wp-content/wphb-logs"
 	fi
 	if [ -d "${directory_path}wp-content/updraft" ]; then
-    	rm -rf "${directory_path}wp-content/updraft"
+	    	rm -rf "${directory_path}wp-content/updraft"
 	fi
 	if [ -d "${directory_path}wp-content/aiowps_backups" ]; then
-    	rm -rf "${directory_path}wp-content/aiowps_backups"
+	    	rm -rf "${directory_path}wp-content/aiowps_backups"
 	fi
 	if [ -f "${directory_path}wp-content/debug.log" ]; then
-    	rm -rf "${directory_path}wp-content/debug.log"
+	    	rm -rf "${directory_path}wp-content/debug.log"
 	fi
 	if [ -d "${directory_path}wp-content/backup-migration" ]; then
-    	rm -rf "${directory_path}wp-content/backup-migration"
+    		rm -rf "${directory_path}wp-content/backup-migration"
 	fi
 	if [ -f "${directory_path}wp-content/backup-migration-config.php" ]; then
-    	rm -rf "${directory_path}wp-content/backup-migration-config.php"
+	    	rm -rf "${directory_path}wp-content/backup-migration-config.php"
 	fi
 
 	unzip -q "/home/ubuntu/wordpress-6.5.5.zip" -d /home/ubuntu/tmp
@@ -385,6 +383,3 @@ main_menu() {
 while true; do
     main_menu
 done
-
-
-
