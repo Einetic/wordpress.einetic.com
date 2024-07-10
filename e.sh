@@ -45,8 +45,8 @@ take_backup() {
 	echo "Zipping..."
 	zip -qr "$zip_filename" "$zip_folder" "$database_filename"
 	rm "$database_filename"
-#	upload_backup "$domain_name" "$zip_filename"
-	mv "$zip_filename" "/home/ubuntu/wp-backup"
+	upload_backup "$domain_name" "$zip_filename"
+#	mv "$zip_filename" "/home/ubuntu/wp-backup"
 }
 
 take_all_backup() {
