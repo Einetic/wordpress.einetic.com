@@ -321,6 +321,7 @@ fix_wp() {
 	unzip -q "/home/ubuntu/wordpress-6.5.5.zip" -d /home/ubuntu/tmp
 	rm -rf /home/ubuntu/tmp/wordpress/wp-content
 	find "$directory_path" -mindepth 1 -maxdepth 1 ! -name 'wp-content' ! -name 'wp-config.php' -exec rm -rf {} +
+	#.well-known superpwa-sw.js
 	mv -f /home/ubuntu/tmp/wordpress/* $directory_path
 	rm -rf /home/ubuntu/tmp/wordpress
 	chown -R $user_name:$user_name /home/$user_name/htdocs/${domain_name}/
