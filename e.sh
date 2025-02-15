@@ -141,7 +141,7 @@ restore_backup() {
 		echo "Restoring Backup"
 		clpctl site:add:php --domainName="$domain_name" --phpVersion=8.3 --vhostTemplate='WordPress' --siteUser="$user_name" --siteUserPassword="$user_password"
 		clpctl db:add --domainName="$domain_name" --databaseName="$user_name" --databaseUserName="$user_name" --databaseUserPassword="$user_password"
-		unzip -q "/home/ubuntu/wordpress-6.6.1.zip" -d /home/ubuntu
+		unzip -q "/home/ubuntu/wordpress-6.7.2.zip" -d /home/ubuntu
 		mv -f /home/ubuntu/wordpress/* /home/$user_name/htdocs/$domain_name/
 		rm -rf /home/ubuntu/wordpress
 		rm -rf /home/$user_name/htdocs/${domain_name}/wp-content/*
@@ -318,7 +318,7 @@ fix_wp() {
 	    	rm -rf "${directory_path}wp-content/backup-migration-config.php"
 	fi
 
-	unzip -q "/home/ubuntu/wordpress-6.6.1.zip" -d /home/ubuntu/tmp
+	unzip -q "/home/ubuntu/wordpress-6.7.2.zip" -d /home/ubuntu/tmp
 	rm -rf /home/ubuntu/tmp/wordpress/wp-content
 	find "$directory_path" -mindepth 1 -maxdepth 1 ! -name 'wp-content' ! -name 'wp-config.php' -exec rm -rf {} +
 	#.well-known superpwa-sw.js
