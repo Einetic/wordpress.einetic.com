@@ -351,12 +351,105 @@ fix_all_wp() {
 	fi	
 }
 
+# Function to read WordPress version from JSON metadata
+get_wp_version_from_json() {
+    local zip_file="$1"
+    local json_file="wp_versions.json"
+    if [ -f "$json_file" ]; then
+        version=$(grep -oP '"'"$zip_file"'"\s*:\s*"\K[^"]+' "$json_file" | head -n1)
+        echo "$version"
+    fi
+}
+
+# Function to update JSON metadata with WordPress version
+update_wp_version_json() {
+    local zip_file="$1"
+    local version="$2"
+    local json_file="wp_versions.json"
+    if [ ! -f "$json_file" ]; then
+        echo "{}" > "$json_file"
+    fi
+    # Remove existing entry for this zip
+    tmpfile=$(mktemp)
+    jq 'del(."'$zip_file'")' "$json_file" > "$tmpfile" && mv "$tmpfile" "$json_file"
+    # Add new entry
+    jq '. + {"'$zip_file'": "'$version'"}' "$json_file" > "$tmpfile" && mv "$tmpfile" "$json_file"
+}
+
+# Function to get WordPress version from a zip file (only used on update)
+get_wordpress_version() {
+    local zip_file="$1"
+    local tmpdir=$(mktemp -d)
+    local version=""
+    if [ -f "$zip_file" ]; then
+        unzip -q "$zip_file" wordpress/wp-includes/version.php -d "$tmpdir" 2>/dev/null
+        if [ -f "$tmpdir/wordpress/wp-includes/version.php" ]; then
+            version=$(grep "\$wp_version =" "$tmpdir/wordpress/wp-includes/version.php" | sed -E "s/.*'([0-9.]+)'.*/\1/")
+        fi
+    fi
+    rm -rf "$tmpdir"
+    echo "$version"
+}
+
+# Function to download the latest WordPress and rename zip to versioned name
+update_wordpress() {
+    clear
+    echo "===== Update WordPress ====="
+    local tmp_zip="wordpress-latest.zip"
+    echo "Downloading latest WordPress..."
+    curl -L -o "$tmp_zip" https://wordpress.org/latest.zip
+    if [ -f "$tmp_zip" ]; then
+        local version=$(get_wordpress_version "$tmp_zip")
+        if [ -n "$version" ]; then
+            local versioned_zip="wordpress-$version.zip"
+            mv -f "$tmp_zip" "$versioned_zip"
+            echo "Downloaded and renamed to: $versioned_zip (version: $version)"
+            update_wp_version_json "$versioned_zip" "$version"
+        else
+            echo "Could not determine WordPress version."
+            rm -f "$tmp_zip"
+        fi
+    else
+        echo "Failed to download WordPress."
+    fi
+    read -p "Press any key to continue. " choice
+}
 
 # Main menu function
 # sed -i 's/\r$//' e.sh
 main_menu() {
 	clear
-    echo "===== Main Menu v0.0.1====="
+    # Find the highest versioned wordpress-*.zip
+    local wp_zip=""
+    local wp_version="Unknown"
+    local json_file="wp_versions.json"
+    local highest_version=""
+    local highest_zip=""
+    shopt -s nullglob
+    for zip in wordpress-*.zip; do
+        local version=$(get_wp_version_from_json "$zip")
+        if [ -z "$version" ]; then
+            version=$(get_wordpress_version "$zip")
+            if [ -n "$version" ]; then
+                update_wp_version_json "$zip" "$version"
+            fi
+        fi
+        if [ -n "$version" ]; then
+            if [ -z "$highest_version" ] || [[ "$version" == $(echo -e "$version\n$highest_version" | sort -V | tail -n1) ]]; then
+                highest_version="$version"
+                highest_zip="$zip"
+            fi
+        fi
+    done
+    shopt -u nullglob
+    if [ -n "$highest_zip" ]; then
+        wp_zip="$highest_zip"
+        wp_version="$highest_version"
+    fi
+    if [ -z "$wp_version" ]; then
+        wp_version="Unknown"
+    fi
+    echo "===== Main Menu v0.0.1 (WordPress: $wp_version) ====="
     echo "1. List websites"
     echo "2. New website"
     echo "3. Backup all"
@@ -364,6 +457,7 @@ main_menu() {
     echo "5. SSL all"
 	echo "6. List backups"
 	echo "7. Fix all wordpress"
+    echo "8. Update WordPress"
     echo "0. Exit"
     echo "====================="
     read -p "Enter your choice: " main_choice
@@ -375,9 +469,10 @@ main_menu() {
 		5) install_all_ssl ;;
 		6) list_local_backup ;;
 		7) fix_all_wp ;;
+        8) update_wordpress ;;
 		0) echo "Exiting program."
 			exit ;;
-		*) echo "Invalid choice. Please enter a number from 1 to 5." ;;
+		*) echo "Invalid choice. Please enter a number from 1 to 8." ;;
 	esac
 }
 
