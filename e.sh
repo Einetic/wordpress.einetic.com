@@ -295,39 +295,65 @@ fix_wp() {
 	directory_path="$1"
 	domain_name=$(basename "$directory_path")
 	user_name=$(generate_username "$domain_name")
-	echo "Fixing ${domain_name}"
-	if [ -d "${directory_path}wp-content/wphb-cache" ]; then
-	    	rm -rf "${directory_path}wp-content/wphb-cache"
-	fi
-	if [ -d "${directory_path}wp-content/wphb-logs" ]; then
-	    	rm -rf "${directory_path}wp-content/wphb-logs"
-	fi
-	if [ -d "${directory_path}wp-content/updraft" ]; then
-	    	rm -rf "${directory_path}wp-content/updraft"
-	fi
-	if [ -d "${directory_path}wp-content/aiowps_backups" ]; then
-	    	rm -rf "${directory_path}wp-content/aiowps_backups"
-	fi
-	if [ -f "${directory_path}wp-content/debug.log" ]; then
-	    	rm -rf "${directory_path}wp-content/debug.log"
-	fi
-	if [ -d "${directory_path}wp-content/backup-migration" ]; then
-    		rm -rf "${directory_path}wp-content/backup-migration"
-	fi
-	if [ -f "${directory_path}wp-content/backup-migration-config.php" ]; then
-	    	rm -rf "${directory_path}wp-content/backup-migration-config.php"
+
+	# Get the highest versioned WordPress zip from meta.json
+	local meta_file="meta.json"
+	local wp_zip=""
+	local highest_version=""
+	shopt -s nullglob
+	for zip in wordpress-*.zip; do
+		local version=$(get_meta_value "$zip")
+		if [ -n "$version" ]; then
+			if [ -z "$highest_version" ] || [[ "$version" == $(echo -e "$version\n$highest_version" | sort -V | tail -n1) ]]; then
+				highest_version="$version"
+				wp_zip="$zip"
+			fi
+		fi
+	done
+	shopt -u nullglob
+	if [ -z "$wp_zip" ]; then
+		echo "No WordPress zip version found in meta.json. Please update WordPress first."
+		return 1
 	fi
 
-	unzip -q "/home/ubuntu/wordpress-6.7.2.zip" -d /home/ubuntu/tmp
+	echo "Fixing ${domain_name} using $wp_zip (version: $highest_version)"
+	if [ -d "${directory_path}wp-content/wphb-cache" ]; then
+	     rm -rf "${directory_path}wp-content/wphb-cache"
+	fi
+	if [ -d "${directory_path}wp-content/wphb-logs" ]; then
+	     rm -rf "${directory_path}wp-content/wphb-logs"
+	fi
+	if [ -d "${directory_path}wp-content/updraft" ]; then
+	     rm -rf "${directory_path}wp-content/updraft"
+	fi
+	if [ -d "${directory_path}wp-content/aiowps_backups" ]; then
+	     rm -rf "${directory_path}wp-content/aiowps_backups"
+	fi
+	if [ -f "${directory_path}wp-content/debug.log" ]; then
+	     rm -rf "${directory_path}wp-content/debug.log"
+	fi
+	if [ -d "${directory_path}wp-content/backup-migration" ]; then
+     rm -rf "${directory_path}wp-content/backup-migration"
+	fi
+	if [ -f "${directory_path}wp-content/backup-migration-config.php" ]; then
+	     rm -rf "${directory_path}wp-content/backup-migration-config.php"
+	fi
+
+	unzip -q "$wp_zip" -d /home/ubuntu/tmp
+	# Remove wp-config.php if it exists in the extracted temp folder
+	if [ -f /home/ubuntu/tmp/wordpress/wp-content/wp-config.php ]; then
+	    rm -f /home/ubuntu/tmp/wordpress/wp-content/wp-config.php
+	fi
 	rm -rf /home/ubuntu/tmp/wordpress/wp-content
-	find "$directory_path" -mindepth 1 -maxdepth 1 ! -name 'wp-content' ! -name 'wp-config.php' -exec rm -rf {} +
-	#.well-known superpwa-sw.js
+	# Remove everything except wp-content, wp-config.php, and .well-known
+	find "$directory_path" -mindepth 1 -maxdepth 1 ! -name 'wp-content' ! -name 'wp-config.php' ! -name '.well-known' -exec rm -rf {} +
+	# Move new WordPress core files in
 	mv -f /home/ubuntu/tmp/wordpress/* $directory_path
 	rm -rf /home/ubuntu/tmp/wordpress
 	chown -R $user_name:$user_name /home/$user_name/htdocs/${domain_name}/
 	find /home/$user_name/ -type d -exec chmod 770 {} \;
 	find /home/$user_name/ -type f -exec chmod 660 {} \;
-	echo "Done."	
+	echo "Done."
 }
 
 fix_all_wp() {
