@@ -1,7 +1,11 @@
 #!/bin/bash
 
 APP_NAME="einetic-wp-fleet"
-INSTALL_DIR="$HOME/$APP_NAME"
+if [ "$EUID" -eq 0 ]; then
+    INSTALL_DIR="/opt/$APP_NAME"
+else
+    INSTALL_DIR="$HOME/$APP_NAME"
+fi
 REPO_URL="https://github.com/Einetic/wordpress.einetic.com.git"
 
 echo "Installing $APP_NAME..."
