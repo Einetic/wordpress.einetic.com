@@ -1,14 +1,14 @@
 #!/bin/bash
 
-SITE_LIST=()
-
+SITE_PATHS=()
 i=1
 
 # CloudPanel
 for dir in /home/*/htdocs/*/; do
     if [ -f "$dir/wp-config.php" ]; then
-        echo "$i. $(basename "$dir")"
-        SITE_LIST+=("$dir")
+        domain=$(basename "$dir")
+        echo "$i. $domain"
+        SITE_PATHS+=("$dir")
         ((i++))
     fi
 done
@@ -16,8 +16,21 @@ done
 # Hostinger
 for dir in /home/*/domains/*/public_html; do
     if [ -f "$dir/wp-config.php" ]; then
-        echo "$i. $(basename $(dirname "$dir"))"
-        SITE_LIST+=("$dir")
+        domain=$(basename "$(dirname "$dir")")
+        echo "$i. $domain"
+        SITE_PATHS+=("$dir")
         ((i++))
     fi
 done
+
+echo "0. Back"
+
+read -p "Select site: " choice
+
+if [ "$choice" -eq 0 ]; then
+    exit
+fi
+
+SELECTED_SITE="${SITE_PATHS[$((choice-1))]}"
+
+echo "$SELECTED_SITE"
