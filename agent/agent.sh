@@ -1,5 +1,47 @@
 #!/bin/bash
 
+run_wp() {
+    SITE="$1"
+    shift
+    CMD="$@"
+
+    if [[ "$SITE" == "$HOME/domains/"* ]]; then
+        wp $CMD --path="$SITE"
+    else
+        OWNER=$(stat -c '%U' "$SITE")
+        sudo -u "$OWNER" -- wp $CMD --path="$SITE"
+    fi
+}
+
+scan_sites() {
+
+    for SITE in "$HOME"/domains/*/public_html
+    do
+        if [ -f "$SITE/wp-config.php" ]; then
+            DOMAIN=$(basename "$(dirname "$SITE")")
+
+            if [[ "$DOMAIN" == *BACKUP* ]]; then
+                continue
+            fi
+
+            echo "$SITE"
+        fi
+    done
+
+    for SITE in /home/*/htdocs/*
+    do
+        if [ -f "$SITE/wp-config.php" ]; then
+            DOMAIN=$(basename "$SITE")
+
+            if [[ "$DOMAIN" == *BACKUP* ]]; then
+                continue
+            fi
+
+            echo "$SITE"
+        fi
+    done
+}
+
 while true
 do
     echo
@@ -55,6 +97,7 @@ do
             ;;
 
         2)
+
             while true
             do
                 echo
@@ -73,45 +116,65 @@ do
                 case $bulk_choice in
 
                     1)
-                        for SITE in $(bash util/find-sites.sh)
+                        scan_sites | while read SITE
                         do
-                            echo "Checking core: $SITE"
-                            wp core verify-checksums --path="$SITE"
+                            DOMAIN=$(basename "$SITE")
+
+                            echo
+                            echo "Checking core: $DOMAIN"
+
+                            run_wp "$SITE" core verify-checksums
                         done
                         ;;
 
                     2)
-                        for SITE in $(bash util/find-sites.sh)
+                        scan_sites | while read SITE
                         do
-                            echo "Checking plugins: $SITE"
-                            wp plugin verify-checksums --all --path="$SITE"
+                            DOMAIN=$(basename "$SITE")
+
+                            echo
+                            echo "Checking plugins: $DOMAIN"
+
+                            run_wp "$SITE" plugin verify-checksums --all
                         done
                         ;;
 
                     3)
-                        for SITE in $(bash util/find-sites.sh)
+                        scan_sites | while read SITE
                         do
-                            echo "Checking themes: $SITE"
-                            wp theme verify-checksums --all --path="$SITE"
+                            DOMAIN=$(basename "$SITE")
+
+                            echo
+                            echo "Checking themes: $DOMAIN"
+
+                            run_wp "$SITE" theme verify-checksums --all
                         done
                         ;;
 
                     4)
-                        for SITE in $(bash util/find-sites.sh)
+                        scan_sites | while read SITE
                         do
-                            echo "Checking database: $SITE"
-                            wp db check --path="$SITE"
+                            DOMAIN=$(basename "$SITE")
+
+                            echo
+                            echo "Checking database: $DOMAIN"
+
+                            run_wp "$SITE" db check
                         done
                         ;;
 
                     5)
-                        for SITE in $(bash util/find-sites.sh)
+                        scan_sites | while read SITE
                         do
-                            echo "Running full check: $SITE"
-                            wp core verify-checksums --path="$SITE"
-                            wp plugin verify-checksums --all --path="$SITE"
-                            wp theme verify-checksums --all --path="$SITE"
-                            wp db check --path="$SITE"
+                            DOMAIN=$(basename "$SITE")
+
+                            echo
+                            echo "Running full check: $DOMAIN"
+
+                            run_wp "$SITE" core verify-checksums
+                            run_wp "$SITE" plugin verify-checksums --all
+                            run_wp "$SITE" theme verify-checksums --all
+                            run_wp "$SITE" db check
                         done
                         ;;
 
@@ -123,6 +186,7 @@ do
                         echo "Invalid option"
                         ;;
                 esac
+
             done
             ;;
 
@@ -134,4 +198,5 @@ do
             echo "Invalid option"
             ;;
     esac
+
 done
