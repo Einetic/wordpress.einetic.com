@@ -3,20 +3,20 @@
 SITE_PATHS=()
 i=1
 
-# CloudPanel
-for dir in /home/*/htdocs/*/; do
+# Hostinger
+for dir in "$HOME"/domains/*/public_html; do
     if [ -f "$dir/wp-config.php" ]; then
-        domain=$(basename "$dir")
+        domain=$(basename "$(dirname "$dir")")
         echo "$i. $domain"
         SITE_PATHS+=("$dir")
         ((i++))
     fi
 done
 
-# Hostinger
-for dir in /home/*/domains/*/public_html; do
+# CloudPanel
+for dir in /home/*/htdocs/*/; do
     if [ -f "$dir/wp-config.php" ]; then
-        domain=$(basename "$(dirname "$dir")")
+        domain=$(basename "$dir")
         echo "$i. $domain"
         SITE_PATHS+=("$dir")
         ((i++))
