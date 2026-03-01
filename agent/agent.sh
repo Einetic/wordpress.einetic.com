@@ -1,22 +1,9 @@
 #!/bin/bash
 
-BACKUP_DIR="$HOME/wp-backups"
-mkdir -p "$BACKUP_DIR"
-
-run_wp() {
-    SITE="$1"
-    shift
-    CMD="$@"
-
-    if [[ "$SITE" == "$HOME/domains/"* ]]; then
-        wp $CMD --path="$SITE" > /dev/null 2>&1
-    else
-        OWNER=$(stat -c '%U' "$SITE")
-        sudo -u "$OWNER" -- wp $CMD --path="$SITE" > /dev/null 2>&1
-    fi
-}
+UTIL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../util" && pwd)"
 
 get_domain() {
+
     SITE="$1"
 
     if [[ "$SITE" == *"/public_html" ]]; then
@@ -51,62 +38,117 @@ scan_sites() {
     done
 }
 
-backup_site() {
+run_bulk() {
 
-    SITE="$1"
-    DOMAIN=$(get_domain "$SITE")
+    ACTION="$1"
 
-    DATE=$(date +"%Y%m%d_%H%M%S")
+    scan_sites | while read SITE
+    do
+        DOMAIN=$(get_domain "$SITE")
 
-    FILE="$BACKUP_DIR/${DOMAIN}_${DATE}.tar.gz"
+        echo
+        echo "Processing: $DOMAIN"
 
-    echo
-    echo "Creating backup: $DOMAIN"
+        case $ACTION in
 
-    tar -czf "$FILE" -C "$SITE" . 2>/dev/null
+            verify-core)
+                wp --path="$SITE" core verify-checksums > /dev/null 2>&1 \
+                && echo "Core OK" || echo "Core FAILED"
+            ;;
 
-    if [ -f "$FILE" ]; then
-        echo "Backup created: $FILE"
-    else
-        echo "Backup failed"
-    fi
+            verify-plugins)
+                wp --path="$SITE" plugin verify-checksums --all > /dev/null 2>&1 \
+                && echo "Plugins OK" || echo "Plugins FAILED"
+            ;;
+
+            verify-themes)
+                wp --path="$SITE" theme verify-checksums --all > /dev/null 2>&1 \
+                && echo "Themes OK" || echo "Themes FAILED"
+            ;;
+
+            verify-db)
+                wp --path="$SITE" db check > /dev/null 2>&1 \
+                && echo "DB OK" || echo "DB FAILED"
+            ;;
+
+            fix-core)
+                bash "$UTIL_DIR/reinstall-core.sh" "$SITE"
+            ;;
+
+            fix-plugins)
+                bash "$UTIL_DIR/reinstall-plugins.sh" "$SITE"
+            ;;
+
+            fix-themes)
+                bash "$UTIL_DIR/reinstall-themes.sh" "$SITE"
+            ;;
+
+            update-core)
+                bash "$UTIL_DIR/update-wordpress.sh" "$SITE"
+            ;;
+
+            optimize-db)
+                wp --path="$SITE" db optimize > /dev/null
+            ;;
+
+            regenerate-salts)
+                wp --path="$SITE" config shuffle-salts > /dev/null
+            ;;
+
+        esac
+
+    done
+
 }
 
-install_ssl() {
+create_admin() {
 
     SITE="$1"
-    DOMAIN=$(get_domain "$SITE")
+
+    read -p "Admin username: " USER
+
+    PASS=$(openssl rand -base64 18)
+
+    wp --path="$SITE" user create "$USER" "$USER@example.com" \
+    --role=administrator --user_pass="$PASS" > /dev/null
 
     echo
-    echo "Installing SSL for: $DOMAIN"
-
-    if command -v clpctl >/dev/null 2>&1; then
-        clpctl lets-encrypt:install:certificate --domainName="$DOMAIN"
-        echo "SSL request sent"
-    else
-        echo "SSL install not supported on this server"
-    fi
+    echo "Admin created"
+    echo "Username: $USER"
+    echo "Password: $PASS"
 }
 
-fix_wordpress() {
+list_admins() {
 
     SITE="$1"
-    DOMAIN=$(get_domain "$SITE")
 
-    echo
-    echo "Repairing WordPress: $DOMAIN"
+    wp --path="$SITE" user list --role=administrator
+}
 
-    echo "Reinstalling core..."
-    run_wp "$SITE" core download --force
+delete_admin() {
 
-    echo "Updating database..."
-    run_wp "$SITE" core update-db
+    SITE="$1"
 
-    echo "Clearing cache folders..."
-    rm -rf "$SITE/wp-content/cache" 2>/dev/null
-    rm -rf "$SITE/wp-content/uploads/cache" 2>/dev/null
+    list_admins "$SITE"
 
-    echo "Repair complete"
+    read -p "Enter admin username to delete: " USER
+
+    wp --path="$SITE" user delete "$USER" --yes
+}
+
+reset_admin_password() {
+
+    SITE="$1"
+
+    list_admins "$SITE"
+
+    read -p "Admin username: " USER
+
+    PASS=$(openssl rand -base64 18)
+
+    wp --path="$SITE" user update "$USER" --user_pass="$PASS"
+
+    echo "New password: $PASS"
 }
 
 while true
@@ -120,194 +162,118 @@ do
     echo "0. Exit"
     echo
 
-    read -p "Enter choice: " main_choice
+    read -p "Choice: " MAIN
 
-    case $main_choice in
+    case $MAIN in
 
-        1)
+    1)
 
-            SITE_PATH=$(bash util/list-sites.sh | tee /dev/tty | tail -n 1)
+        SITE_PATH=$(bash "$UTIL_DIR/list-sites.sh" | tee /dev/tty | tail -n 1)
 
-            [ -z "$SITE_PATH" ] && continue
+        [ -z "$SITE_PATH" ] && continue
 
-            while true
-            do
-                DOMAIN=$(get_domain "$SITE_PATH")
+        while true
+        do
 
-                echo
-                echo "Selected: $DOMAIN"
-                echo
-                echo "1. Backup"
-                echo "2. SSL"
-                echo "3. Fix WordPress"
-                echo "0. Back"
-                echo
+            DOMAIN=$(get_domain "$SITE_PATH")
 
-                read -p "Enter choice: " choice
+            echo
+            echo "===== $DOMAIN ====="
+            echo
+            echo "1 Verify Core"
+            echo "2 Verify Plugins"
+            echo "3 Verify Themes"
+            echo "4 Verify DB"
+            echo
+            echo "5 Fix Core"
+            echo "6 Reinstall Plugins"
+            echo "7 Reinstall Themes"
+            echo "8 Update WordPress"
+            echo
+            echo "9 Optimize DB"
+            echo "10 Regenerate Salts"
+            echo
+            echo "11 List Admins"
+            echo "12 Create Admin"
+            echo "13 Delete Admin"
+            echo "14 Reset Admin Password"
+            echo
+            echo "0 Back"
+            echo
 
-                case $choice in
+            read -p "Choice: " CH
 
-                    1)
-                        backup_site "$SITE_PATH"
-                        ;;
+            case $CH in
 
-                    2)
-                        install_ssl "$SITE_PATH"
-                        ;;
+            1) wp --path="$SITE_PATH" core verify-checksums ;;
+            2) wp --path="$SITE_PATH" plugin verify-checksums --all ;;
+            3) wp --path="$SITE_PATH" theme verify-checksums --all ;;
+            4) wp --path="$SITE_PATH" db check ;;
 
-                    3)
-                        fix_wordpress "$SITE_PATH"
-                        ;;
+            5) bash "$UTIL_DIR/reinstall-core.sh" "$SITE_PATH" ;;
+            6) bash "$UTIL_DIR/reinstall-plugins.sh" "$SITE_PATH" ;;
+            7) bash "$UTIL_DIR/reinstall-themes.sh" "$SITE_PATH" ;;
+            8) bash "$UTIL_DIR/update-wordpress.sh" "$SITE_PATH" ;;
 
-                    0)
-                        break
-                        ;;
+            9) wp --path="$SITE_PATH" db optimize ;;
+            10) wp --path="$SITE_PATH" config shuffle-salts ;;
 
-                    *)
-                        echo "Invalid option"
-                        ;;
+            11) list_admins "$SITE_PATH" ;;
+            12) create_admin "$SITE_PATH" ;;
+            13) delete_admin "$SITE_PATH" ;;
+            14) reset_admin_password "$SITE_PATH" ;;
 
-                esac
-            done
+            0) break ;;
 
-        ;;
+            esac
 
-        2)
+        done
 
-            while true
-            do
+    ;;
 
-                echo
-                echo "===== Bulk Operations ====="
-                echo
-                echo "1. Verify WordPress Core"
-                echo "2. Verify Plugins"
-                echo "3. Verify Themes"
-                echo "4. Verify Database"
-                echo "5. Run All Checks"
-                echo "0. Back"
-                echo
+    2)
 
-                read -p "Enter choice: " bulk_choice
+        echo
+        echo "===== Bulk Operations ====="
+        echo
+        echo "1 Verify Core"
+        echo "2 Verify Plugins"
+        echo "3 Verify Themes"
+        echo "4 Verify DB"
+        echo
+        echo "5 Fix Core"
+        echo "6 Reinstall Plugins"
+        echo "7 Reinstall Themes"
+        echo "8 Update WordPress"
+        echo
+        echo "9 Optimize DB"
+        echo "10 Regenerate Salts"
+        echo
 
-                case $bulk_choice in
+        read -p "Choice: " BULK
 
-                    1)
+        case $BULK in
 
-                        scan_sites | while read SITE
-                        do
-                            DOMAIN=$(get_domain "$SITE")
+        1) run_bulk verify-core ;;
+        2) run_bulk verify-plugins ;;
+        3) run_bulk verify-themes ;;
+        4) run_bulk verify-db ;;
 
-                            echo
-                            echo "Checking core: $DOMAIN"
+        5) run_bulk fix-core ;;
+        6) run_bulk fix-plugins ;;
+        7) run_bulk fix-themes ;;
+        8) run_bulk update-core ;;
 
-                            if run_wp "$SITE" core verify-checksums
-                            then
-                                echo "Status: OK"
-                            else
-                                echo "Status: FAILED"
-                            fi
-                        done
+        9) run_bulk optimize-db ;;
+        10) run_bulk regenerate-salts ;;
 
-                    ;;
+        esac
 
-                    2)
+    ;;
 
-                        scan_sites | while read SITE
-                        do
-                            DOMAIN=$(get_domain "$SITE")
-
-                            echo
-                            echo "Checking plugins: $DOMAIN"
-
-                            if run_wp "$SITE" plugin verify-checksums --all
-                            then
-                                echo "Status: OK"
-                            else
-                                echo "Status: FAILED"
-                            fi
-                        done
-
-                    ;;
-
-                    3)
-
-                        scan_sites | while read SITE
-                        do
-                            DOMAIN=$(get_domain "$SITE")
-
-                            echo
-                            echo "Checking themes: $DOMAIN"
-
-                            if run_wp "$SITE" theme verify-checksums --all
-                            then
-                                echo "Status: OK"
-                            else
-                                echo "Status: FAILED"
-                            fi
-                        done
-
-                    ;;
-
-                    4)
-
-                        scan_sites | while read SITE
-                        do
-                            DOMAIN=$(get_domain "$SITE")
-
-                            echo
-                            echo "Checking database: $DOMAIN"
-
-                            if run_wp "$SITE" db check
-                            then
-                                echo "Status: OK"
-                            else
-                                echo "Status: FAILED"
-                            fi
-                        done
-
-                    ;;
-
-                    5)
-
-                        scan_sites | while read SITE
-                        do
-                            DOMAIN=$(get_domain "$SITE")
-
-                            echo
-                            echo "Running full check: $DOMAIN"
-
-                            run_wp "$SITE" core verify-checksums
-                            run_wp "$SITE" plugin verify-checksums --all
-                            run_wp "$SITE" theme verify-checksums --all
-                            run_wp "$SITE" db check
-
-                            echo "Completed: $DOMAIN"
-                        done
-
-                    ;;
-
-                    0)
-                        break
-                        ;;
-
-                    *)
-                        echo "Invalid option"
-                        ;;
-
-                esac
-
-            done
-
-        ;;
-
-        0)
-            exit
-        ;;
-
-        *)
-            echo "Invalid option"
-        ;;
+    0)
+        exit
+    ;;
 
     esac
 
