@@ -1,10 +1,14 @@
-SITE_PATH=$(bash util/list-sites.sh)
+#!/bin/bash
+
+SITE_PATH=$(bash util/list-sites.sh | tail -n 1)
 
 if [ -z "$SITE_PATH" ]; then
-    return
+    exit
 fi
 
+echo
 echo "Selected: $SITE_PATH"
+echo
 
 echo "1. Backup"
 echo "2. SSL"
@@ -15,12 +19,18 @@ read choice
 
 case $choice in
 1)
-    bash util/backup-site.sh "$SITE_PATH"
+    echo "Backup site: $SITE_PATH"
     ;;
 2)
-    bash util/install-ssl.sh "$SITE_PATH"
+    echo "Install SSL for: $SITE_PATH"
     ;;
 3)
-    bash util/fix-site.sh "$SITE_PATH"
+    echo "Fix WordPress: $SITE_PATH"
+    ;;
+0)
+    exit
+    ;;
+*)
+    echo "Invalid option"
     ;;
 esac
