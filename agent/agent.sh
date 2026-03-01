@@ -70,8 +70,7 @@ do
 
         1)
 
-            SITE_PATH=$(bash util/list-sites.sh)
-SITE_PATH=$(echo "$SITE_PATH" | tail -n 1)
+            SITE_PATH=$(bash util/list-sites.sh | tee /dev/tty | tail -n 1)
 
             if [ -z "$SITE_PATH" ]; then
                 continue
