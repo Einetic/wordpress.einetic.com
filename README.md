@@ -1,59 +1,66 @@
 # Einetic WP Fleet
 
-Einetic WP Fleet is a lightweight server agent for managing multiple WordPress sites across VPS environments (Ubuntu, CloudPanel, generic LEMP/LAMP).
+**Einetic WP Fleet** is a lightweight CLI tool for managing multiple WordPress installations on a server.
 
-It provides centralized operations like:
+It is designed for environments such as:
 
-* site discovery
-* fixing WordPress core
-* backup & restore
-* auto-login link generation
-* site create/delete/rename
-* automation via API + background service
+* Hostinger shared hosting
+* VPS servers
+* CloudPanel based servers
+* Generic LEMP/LAMP setups
 
-This project is designed for infrastructure automation and fleet-scale WordPress operations.
+The tool discovers WordPress installations and allows quick operations like fixing WordPress core, reinstalling plugins/themes, backups, and administrative utilities using **wp-cli**.
 
 ---
 
-## 🧭 Architecture Overview
+# Core Philosophy
 
-Each VPS runs a background agent:
+Einetic WP Fleet is built with three principles:
 
-```
-einetic-wp-fleet.service
-```
+* **Simple bash utilities**
+* **Platform-agnostic WordPress operations**
+* **Automation-ready architecture**
 
-The agent:
+Each operation is implemented as a standalone script so it can be used:
 
-* starts at boot
-* restarts automatically if stopped
-* exposes internal API
-* executes site operations using wp-cli + Linux commands
-
-All operations are handled via modular utility scripts.
+* from the CLI agent
+* via SSH
+* in automation scripts
+* by future APIs
 
 ---
 
-## 📁 Project Structure
+# Project Structure
 
 ```
 agent/
-   install.sh
-   agent.sh
-   config.env
+    agent.sh
+    config.sample.env
+
+core/
+    detect-platform.sh
+    env.sh
+    logger.sh
 
 util/
-   fleet-list-sites.sh
-   fleet-fix-site.sh
-   fleet-backup-site.sh
-   fleet-login-link.sh
-   fleet-create-site.sh
-   fleet-delete-site.sh
-   fleet-rename-site.sh
-   fleet-restore-site.sh
+    find-sites.sh
+    list-sites.sh
+    get-site-path.sh
+    backup-site.sh
+    fix-site.sh
+    login-link.sh
+    reinstall-core.sh
+    reinstall-plugins.sh
+    reinstall-themes.sh
+    update-wordpress.sh
+    wp-cli.sh
+
+scripts/
+    install.sh
+    update.sh
 
 service/
-   einetic-wp-fleet.service
+    einetic-wp-fleet.service
 
 logs/
 tmp/
@@ -61,174 +68,186 @@ tmp/
 
 ---
 
-## ⚙️ Requirements
+# Requirements
 
-* Ubuntu 22/24 LTS
-* Root access
-* Internet access
-* WordPress sites (CloudPanel or generic)
-* wp-cli (auto-installed if missing)
+Server requirements:
+
+* Linux server
+* Bash
+* wp-cli installed
+* WordPress sites available on the server
+
+Typical WordPress paths supported:
+
+Hostinger:
+
+```
+/home/<user>/domains/<domain>/public_html
+```
+
+CloudPanel:
+
+```
+/home/<user>/htdocs/<domain>
+```
 
 ---
 
-## 🚀 Installation
+# Installation
 
-Run on a fresh VPS:
+Install the tool using:
 
 ```
-curl -s https://raw.githubusercontent.com/Einetic/wordpress.einetic.com/main/agent/install.sh | bash
+curl -s https://raw.githubusercontent.com/Einetic/wordpress.einetic.com/master/scripts/install.sh | bash
 ```
 
 This will:
 
-1. Install dependencies
-2. Install wp-cli
-3. Clone Einetic WP Fleet
-4. Configure system service
-5. Enable auto start
-6. Start agent
+1. Clone the repository
+2. Create working directories
+3. Prepare the tool environment
 
----
-
-## 🧪 Verify Installation
-
-Check service status:
+Default install location:
 
 ```
-systemctl status einetic-wp-fleet
+~/einetic-wp-fleet
 ```
 
-Check logs:
+or on root servers:
 
 ```
-journalctl -u einetic-wp-fleet -f
+/opt/einetic-wp-fleet
 ```
 
 ---
 
-## 🔐 Configuration
+# Running the Tool
 
-Config file:
-
-```
-/opt/einetic-wp-fleet/agent/config.env
-```
-
-Example:
+Go to the installation directory:
 
 ```
-SERVER_API_KEY=change-this
-PORT=8081
-NODE_NAME=my-vps-01
+cd ~/einetic-wp-fleet
 ```
 
-Never commit this file to repository.
+Before running for the first time you may need to ensure:
+
+### 1️⃣ Shell scripts use LF line endings
+
+If you developed on Windows run:
+
+```
+sed -i 's/\r$//' agent/*.sh
+sed -i 's/\r$//' util/*.sh
+sed -i 's/\r$//' scripts/*.sh
+```
+
+### 2️⃣ Make scripts executable
+
+```
+chmod +x agent/*.sh
+chmod +x util/*.sh
+chmod +x scripts/*.sh
+```
+
+### 3️⃣ Run the agent
+
+```
+./agent/agent.sh
+```
+
+The tool will:
+
+1. discover WordPress sites
+2. display a numbered list
+3. allow selecting a site
+4. execute management utilities
 
 ---
 
-## 🧠 Supported Operations (planned)
+# Updating the Tool
 
-* List all WordPress sites
-* Fix corrupted WordPress
-* Backup site
-* Restore site
-* Create site
-* Delete site
-* Rename site
-* Generate auto-login link
-* Plugin/theme install
-* Security scan
+To update the installed version:
+
+```
+bash scripts/update.sh
+```
+
+or manually:
+
+```
+git pull
+```
 
 ---
 
-## 🧩 Utility Design Rule
+# Development Notes (Windows)
 
-Every util script:
+If developing on Windows:
 
-* works standalone
-* accepts domain/path
-* outputs structured result
-* no dependency on agent
-* reusable via SSH or API
+Create `.gitattributes` to enforce Linux line endings:
+
+```
+*.sh text eol=lf
+```
+
+This prevents CRLF issues when running scripts on Linux servers.
 
 ---
 
-## 📡 Agent Execution Model
+# Utility Script Design Rules
 
-Agent runs as system service:
+Every utility script should:
+
+* work independently
+* accept a WordPress path
+* produce clear output
+* rely on wp-cli where possible
+
+Example usage:
 
 ```
-systemd → agent → util scripts → wp-cli/linux
+bash util/update-wordpress.sh /path/to/site
 ```
 
-Future model includes:
+---
 
-* central fleet control
-* task orchestration
+# Future Roadmap
+
+### Phase 1
+
+* WordPress repair utilities
+* improved site discovery
+* platform detection
+
+### Phase 2
+
+* background fleet agent
+* remote command execution
+* centralized management
+
+### Phase 3
+
 * malware monitoring
-* update automation
+* vulnerability scanning
+* automatic repair
 
 ---
 
-## 🛡️ Security Notes
+# Security Notes
 
-Do NOT commit:
-
-* config.env
-* API keys
-* credentials
-* backup paths
-* server IP mappings
-
-Agent must:
-
-* validate input
-* require API key
-* avoid arbitrary shell execution
-
----
-
-## 📦 WordPress Bundles
-
-WordPress core, plugins, themes, and backups are NOT stored in this repo.
-
-They are distributed via:
+Never commit:
 
 ```
-wordpress.einetic.com/dist/
+.env files
+API keys
+server credentials
+backup archives
 ```
 
 ---
 
-## 🧱 Roadmap
+# License
 
-Phase 1:
+License to be decided (MIT recommended).
 
-* installer
-* site detection
-* fix + backup utilities
-
-Phase 2:
-
-* remote API
-* fleet orchestration
-* auto updates
-
-Phase 3:
-
-* malware monitoring daemon
-* plugin vulnerability scanner
-* central dashboard
-
----
-
-## 📄 License
-
-To be decided (MIT / Apache 2.0 recommended).
-
----
-
-## 🤝 Contribution
-
-Internal infra-first project.
-External contributions allowed after core stabilization.
+--- 
