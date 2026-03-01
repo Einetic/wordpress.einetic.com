@@ -1,5 +1,3 @@
-config.env
-logs/
-tmp/
-*.log
-.env
+logs/*
+tmp/*
+agent/config.env
