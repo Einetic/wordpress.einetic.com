@@ -10,4 +10,4 @@ if [ -z "$SITE_PATH" ]; then
     exit 1
 fi
 
-wp_exec "$SITE_PATH" core update
+wp_exec "$SITE_PATH" core update --skip-plugins --skip-themes

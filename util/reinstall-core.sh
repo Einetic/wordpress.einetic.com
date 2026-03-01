@@ -5,4 +5,4 @@ source "$SCRIPT_DIR/core.sh"
 
 SITE_PATH="$1"
 
-wp_exec "$SITE_PATH" core download --skip-content --force
+wp_exec "$SITE_PATH" core download --skip-content --force --skip-plugins --skip-themes

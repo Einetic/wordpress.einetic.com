@@ -5,9 +5,9 @@ source "$SCRIPT_DIR/core.sh"
 
 SITE_PATH="$1"
 
-THEMES=$(wp_exec "$SITE_PATH" theme list --field=name)
+THEMES=$(wp_exec "$SITE_PATH" theme list --field=name --skip-plugins --skip-themes)
 
 for theme in $THEMES
 do
-    wp_exec "$SITE_PATH" theme install "$theme" --force
+    wp_exec "$SITE_PATH" theme install "$theme" --force --skip-plugins --skip-themes
 done
