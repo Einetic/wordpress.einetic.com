@@ -6,10 +6,20 @@ run_wp() {
     CMD="$@"
 
     if [[ "$SITE" == "$HOME/domains/"* ]]; then
-        wp $CMD --path="$SITE"
+        wp $CMD --path="$SITE" > /dev/null 2>&1
     else
         OWNER=$(stat -c '%U' "$SITE")
-        sudo -u "$OWNER" -- wp $CMD --path="$SITE"
+        sudo -u "$OWNER" -- wp $CMD --path="$SITE" > /dev/null 2>&1
+    fi
+}
+
+get_domain() {
+    SITE="$1"
+
+    if [[ "$SITE" == *"/public_html" ]]; then
+        basename "$(dirname "$SITE")"
+    else
+        basename "$SITE"
     fi
 }
 
@@ -18,6 +28,7 @@ scan_sites() {
     for SITE in "$HOME"/domains/*/public_html
     do
         if [ -f "$SITE/wp-config.php" ]; then
+
             DOMAIN=$(basename "$(dirname "$SITE")")
 
             if [[ "$DOMAIN" == *BACKUP* ]]; then
@@ -31,6 +42,7 @@ scan_sites() {
     for SITE in /home/*/htdocs/*
     do
         if [ -f "$SITE/wp-config.php" ]; then
+
             DOMAIN=$(basename "$SITE")
 
             if [[ "$DOMAIN" == *BACKUP* ]]; then
@@ -57,6 +69,7 @@ do
     case $main_choice in
 
         1)
+
             SITE_PATH=$(bash util/list-sites.sh | tail -n 1)
 
             if [ -z "$SITE_PATH" ]; then
@@ -77,29 +90,37 @@ do
                 read -p "Enter choice: " choice
 
                 case $choice in
+
                     1)
                         echo "Backup site: $SITE_PATH"
                         ;;
+
                     2)
                         echo "Install SSL for: $SITE_PATH"
                         ;;
+
                     3)
                         echo "Fix WordPress: $SITE_PATH"
                         ;;
+
                     0)
                         break
                         ;;
+
                     *)
                         echo "Invalid option"
                         ;;
+
                 esac
             done
+
             ;;
 
         2)
 
             while true
             do
+
                 echo
                 echo "===== Bulk Operations ====="
                 echo
@@ -116,57 +137,90 @@ do
                 case $bulk_choice in
 
                     1)
+
                         scan_sites | while read SITE
                         do
-                            DOMAIN=$(basename "$SITE")
+                            DOMAIN=$(get_domain "$SITE")
 
                             echo
                             echo "Checking core: $DOMAIN"
 
-                            run_wp "$SITE" core verify-checksums
+                            if run_wp "$SITE" core verify-checksums
+                            then
+                                echo "Status: OK"
+                            else
+                                echo "Status: FAILED"
+                            fi
+
                         done
+
                         ;;
 
                     2)
+
                         scan_sites | while read SITE
                         do
-                            DOMAIN=$(basename "$SITE")
+                            DOMAIN=$(get_domain "$SITE")
 
                             echo
                             echo "Checking plugins: $DOMAIN"
 
-                            run_wp "$SITE" plugin verify-checksums --all
+                            if run_wp "$SITE" plugin verify-checksums --all
+                            then
+                                echo "Status: OK"
+                            else
+                                echo "Status: FAILED"
+                            fi
+
                         done
+
                         ;;
 
                     3)
+
                         scan_sites | while read SITE
                         do
-                            DOMAIN=$(basename "$SITE")
+                            DOMAIN=$(get_domain "$SITE")
 
                             echo
                             echo "Checking themes: $DOMAIN"
 
-                            run_wp "$SITE" theme verify-checksums --all
+                            if run_wp "$SITE" theme verify-checksums --all
+                            then
+                                echo "Status: OK"
+                            else
+                                echo "Status: FAILED"
+                            fi
+
                         done
+
                         ;;
 
                     4)
+
                         scan_sites | while read SITE
                         do
-                            DOMAIN=$(basename "$SITE")
+                            DOMAIN=$(get_domain "$SITE")
 
                             echo
                             echo "Checking database: $DOMAIN"
 
-                            run_wp "$SITE" db check
+                            if run_wp "$SITE" db check
+                            then
+                                echo "Status: OK"
+                            else
+                                echo "Status: FAILED"
+                            fi
+
                         done
+
                         ;;
 
                     5)
+
                         scan_sites | while read SITE
                         do
-                            DOMAIN=$(basename "$SITE")
+                            DOMAIN=$(get_domain "$SITE")
 
                             echo
                             echo "Running full check: $DOMAIN"
@@ -175,7 +229,11 @@ do
                             run_wp "$SITE" plugin verify-checksums --all
                             run_wp "$SITE" theme verify-checksums --all
                             run_wp "$SITE" db check
+
+                            echo "Completed: $DOMAIN"
+
                         done
+
                         ;;
 
                     0)
@@ -185,9 +243,11 @@ do
                     *)
                         echo "Invalid option"
                         ;;
+
                 esac
 
             done
+
             ;;
 
         0)
@@ -197,6 +257,7 @@ do
         *)
             echo "Invalid option"
             ;;
+
     esac
 
 done
