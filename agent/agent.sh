@@ -1,5 +1,8 @@
 #!/bin/bash
 
+BACKUP_DIR="$HOME/wp-backups"
+mkdir -p "$BACKUP_DIR"
+
 run_wp() {
     SITE="$1"
     shift
@@ -28,12 +31,9 @@ scan_sites() {
     for SITE in "$HOME"/domains/*/public_html
     do
         if [ -f "$SITE/wp-config.php" ]; then
-
             DOMAIN=$(basename "$(dirname "$SITE")")
 
-            if [[ "$DOMAIN" == *BACKUP* ]]; then
-                continue
-            fi
+            [[ "$DOMAIN" == *BACKUP* ]] && continue
 
             echo "$SITE"
         fi
@@ -42,20 +42,76 @@ scan_sites() {
     for SITE in /home/*/htdocs/*
     do
         if [ -f "$SITE/wp-config.php" ]; then
-
             DOMAIN=$(basename "$SITE")
 
-            if [[ "$DOMAIN" == *BACKUP* ]]; then
-                continue
-            fi
+            [[ "$DOMAIN" == *BACKUP* ]] && continue
 
             echo "$SITE"
         fi
     done
 }
 
+backup_site() {
+
+    SITE="$1"
+    DOMAIN=$(get_domain "$SITE")
+
+    DATE=$(date +"%Y%m%d_%H%M%S")
+
+    FILE="$BACKUP_DIR/${DOMAIN}_${DATE}.tar.gz"
+
+    echo
+    echo "Creating backup: $DOMAIN"
+
+    tar -czf "$FILE" -C "$SITE" . 2>/dev/null
+
+    if [ -f "$FILE" ]; then
+        echo "Backup created: $FILE"
+    else
+        echo "Backup failed"
+    fi
+}
+
+install_ssl() {
+
+    SITE="$1"
+    DOMAIN=$(get_domain "$SITE")
+
+    echo
+    echo "Installing SSL for: $DOMAIN"
+
+    if command -v clpctl >/dev/null 2>&1; then
+        clpctl lets-encrypt:install:certificate --domainName="$DOMAIN"
+        echo "SSL request sent"
+    else
+        echo "SSL install not supported on this server"
+    fi
+}
+
+fix_wordpress() {
+
+    SITE="$1"
+    DOMAIN=$(get_domain "$SITE")
+
+    echo
+    echo "Repairing WordPress: $DOMAIN"
+
+    echo "Reinstalling core..."
+    run_wp "$SITE" core download --force
+
+    echo "Updating database..."
+    run_wp "$SITE" core update-db
+
+    echo "Clearing cache folders..."
+    rm -rf "$SITE/wp-content/cache" 2>/dev/null
+    rm -rf "$SITE/wp-content/uploads/cache" 2>/dev/null
+
+    echo "Repair complete"
+}
+
 while true
 do
+
     echo
     echo "===== Einetic WP Fleet ====="
     echo
@@ -72,18 +128,18 @@ do
 
             SITE_PATH=$(bash util/list-sites.sh | tee /dev/tty | tail -n 1)
 
-            if [ -z "$SITE_PATH" ]; then
-                continue
-            fi
+            [ -z "$SITE_PATH" ] && continue
 
             while true
             do
+                DOMAIN=$(get_domain "$SITE_PATH")
+
                 echo
-                echo "Selected: $SITE_PATH"
+                echo "Selected: $DOMAIN"
                 echo
                 echo "1. Backup"
                 echo "2. SSL"
-                echo "3. Fix"
+                echo "3. Fix WordPress"
                 echo "0. Back"
                 echo
 
@@ -92,15 +148,15 @@ do
                 case $choice in
 
                     1)
-                        echo "Backup site: $SITE_PATH"
+                        backup_site "$SITE_PATH"
                         ;;
 
                     2)
-                        echo "Install SSL for: $SITE_PATH"
+                        install_ssl "$SITE_PATH"
                         ;;
 
                     3)
-                        echo "Fix WordPress: $SITE_PATH"
+                        fix_wordpress "$SITE_PATH"
                         ;;
 
                     0)
@@ -114,7 +170,7 @@ do
                 esac
             done
 
-            ;;
+        ;;
 
         2)
 
@@ -124,10 +180,10 @@ do
                 echo
                 echo "===== Bulk Operations ====="
                 echo
-                echo "1. Verify WordPress Core (All Sites)"
-                echo "2. Verify Plugins (All Sites)"
-                echo "3. Verify Themes (All Sites)"
-                echo "4. Verify Database (All Sites)"
+                echo "1. Verify WordPress Core"
+                echo "2. Verify Plugins"
+                echo "3. Verify Themes"
+                echo "4. Verify Database"
                 echo "5. Run All Checks"
                 echo "0. Back"
                 echo
@@ -151,10 +207,9 @@ do
                             else
                                 echo "Status: FAILED"
                             fi
-
                         done
 
-                        ;;
+                    ;;
 
                     2)
 
@@ -171,10 +226,9 @@ do
                             else
                                 echo "Status: FAILED"
                             fi
-
                         done
 
-                        ;;
+                    ;;
 
                     3)
 
@@ -191,10 +245,9 @@ do
                             else
                                 echo "Status: FAILED"
                             fi
-
                         done
 
-                        ;;
+                    ;;
 
                     4)
 
@@ -211,10 +264,9 @@ do
                             else
                                 echo "Status: FAILED"
                             fi
-
                         done
 
-                        ;;
+                    ;;
 
                     5)
 
@@ -231,10 +283,9 @@ do
                             run_wp "$SITE" db check
 
                             echo "Completed: $DOMAIN"
-
                         done
 
-                        ;;
+                    ;;
 
                     0)
                         break
@@ -248,15 +299,15 @@ do
 
             done
 
-            ;;
+        ;;
 
         0)
             exit
-            ;;
+        ;;
 
         *)
             echo "Invalid option"
-            ;;
+        ;;
 
     esac
 
