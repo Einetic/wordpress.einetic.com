@@ -18,28 +18,28 @@ mkdir -p "$BASE_DIR/agent" "$LOG_DIR"
 [ -f "$CONFIG_FILE" ] || echo 'LAST_UPDATE=""' > "$CONFIG_FILE"
 source "$CONFIG_FILE"
 
-# Auto-fix permissions
 chmod +x "$BASE_DIR"/agent/*.sh 2>/dev/null
 chmod +x "$UTIL_DIR"/*.sh 2>/dev/null
 chmod +x "$BASE_DIR"/scripts/*.sh 2>/dev/null
 
+pause(){ read -p "Press Enter to continue..."; }
+
 # ---------------- AUTO UPDATE ----------------
 
 check_update(){
-
 TODAY=$(date +%Y-%m-%d)
 [ "$LAST_UPDATE" == "$TODAY" ] && return
 
 cd "$BASE_DIR" || return
 
-git fetch origin > /dev/null 2>&1
+git fetch origin >/dev/null 2>&1
 
 LOCAL=$(git rev-parse HEAD)
 REMOTE=$(git rev-parse origin/master)
 
 if [ "$LOCAL" != "$REMOTE" ]; then
 echo "Updating Fleet..."
-git reset --hard origin/master > /dev/null 2>&1
+git reset --hard origin/master >/dev/null 2>&1
 chmod +x agent/*.sh util/*.sh scripts/*.sh 2>/dev/null
 sed -i "s/^LAST_UPDATE=.*/LAST_UPDATE=\"$TODAY\"/" "$CONFIG_FILE"
 exec "$BASE_DIR/agent/agent.sh"
@@ -50,10 +50,9 @@ fi
 
 check_update
 
-# ---------------- SERVICE MANAGEMENT ----------------
+# ---------------- SYSTEMD SUPPORT ----------------
 
 supports_systemd(){
-
 command -v systemctl >/dev/null 2>&1 || return 1
 command -v sudo >/dev/null 2>&1 || return 1
 return 0
@@ -90,7 +89,7 @@ start_service(){
 
 if ! supports_systemd; then
 echo
-echo "Monitor Service not supported on this server (shared hosting detected)"
+echo "Monitor Service not supported on this server"
 pause
 return
 fi
@@ -167,13 +166,10 @@ return
 fi
 
 sudo systemctl status "$SERVICE_NAME.timer" --no-pager
-
 pause
 }
 
-# ---------------- COMMON FUNCTIONS ----------------
-
-pause(){ read -p "Press Enter to continue..."; }
+# ---------------- SITE FUNCTIONS ----------------
 
 get_domain(){
 SITE="$1"
@@ -185,16 +181,12 @@ scan_sites(){
 for SITE in "$HOME"/domains/*/public_html
 do
 [ -f "$SITE/wp-config.php" ] || continue
-DOMAIN=$(basename "$(dirname "$SITE")")
-[[ "$DOMAIN" == *BACKUP* ]] && continue
 echo "$SITE"
 done
 
 for SITE in /home/*/htdocs/*
 do
 [ -f "$SITE/wp-config.php" ] || continue
-DOMAIN=$(basename "$SITE")
-[[ "$DOMAIN" == *BACKUP* ]] && continue
 echo "$SITE"
 done
 
@@ -215,28 +207,33 @@ printf "%-40s" "$DOMAIN"
 
 case $ACTION in
 
-verify-core)
-wp --path="$SITE" core verify-checksums --skip-plugins --skip-themes > /dev/null 2>&1 && echo "OK" || echo "FAILED"
+verify-all)
+wp --path="$SITE" core verify-checksums --skip-plugins --skip-themes >/dev/null 2>&1
+CORE_STATUS=$?
+wp --path="$SITE" plugin verify-checksums --all --skip-plugins --skip-themes >/dev/null 2>&1
+PLUGIN_STATUS=$?
+
+if [ $CORE_STATUS -eq 0 ] && [ $PLUGIN_STATUS -eq 0 ]; then
+echo "OK"
+else
+echo "FAILED"
+fi
 ;;
 
-verify-plugins)
-wp --path="$SITE" plugin verify-checksums --all --skip-plugins --skip-themes > /dev/null 2>&1 && echo "OK" || echo "FAILED"
-;;
-
-verify-themes)
-wp --path="$SITE" theme verify-checksums --all --skip-plugins --skip-themes > /dev/null 2>&1 && echo "OK" || echo "FAILED"
-;;
-
-verify-db)
-wp --path="$SITE" db check --skip-plugins --skip-themes > /dev/null 2>&1 && echo "OK" || echo "FAILED"
+update-all)
+wp --path="$SITE" core update --quiet
+wp --path="$SITE" plugin update --all --quiet
+wp --path="$SITE" theme update --all --quiet
+wp --path="$SITE" rewrite flush --hard --quiet
+echo "UPDATED"
 ;;
 
 fix-wordpress)
-bash "$UTIL_DIR/fix-wordpress.sh" "$SITE" > /dev/null && echo "REPAIRED"
+bash "$UTIL_DIR/fix-wordpress.sh" "$SITE" >/dev/null && echo "REPAIRED"
 ;;
 
 deep-scan)
-bash "$UTIL_DIR/deep-scan.sh" "$SITE" > /dev/null && echo "SCANNED"
+bash "$UTIL_DIR/deep-scan.sh" "$SITE" >/dev/null && echo "SCANNED"
 ;;
 
 esac
@@ -286,11 +283,11 @@ echo "================================="
 echo "SITE : $DOMAIN"
 echo "================================="
 echo
-echo "1) Full WordPress Repair"
-echo "2) Deep Scan"
-echo "3) Verify Core"
-echo "4) Verify Plugins"
-echo "5) Verify Themes"
+echo "1) Verify Integrity (Core + Plugins)"
+echo "2) Check Themes"
+echo "3) Update Everything"
+echo "4) Full WordPress Repair"
+echo "5) Deep Scan"
 echo "6) Verify Database"
 echo "0) Back"
 echo
@@ -298,13 +295,43 @@ echo
 read -p "Select option: " CH
 
 case $CH in
-1) bash "$UTIL_DIR/fix-wordpress.sh" "$SITE_PATH" ; pause ;;
-2) bash "$UTIL_DIR/deep-scan.sh" "$SITE_PATH" ; pause ;;
-3) wp --path="$SITE_PATH" core verify-checksums --skip-plugins --skip-themes ; pause ;;
-4) wp --path="$SITE_PATH" plugin verify-checksums --all --skip-plugins --skip-themes ; pause ;;
-5) wp --path="$SITE_PATH" theme verify-checksums --all --skip-plugins --skip-themes ; pause ;;
-6) wp --path="$SITE_PATH" db check --skip-plugins --skip-themes ; pause ;;
+
+1)
+wp --path="$SITE_PATH" core verify-checksums --skip-plugins --skip-themes
+wp --path="$SITE_PATH" plugin verify-checksums --all --skip-plugins --skip-themes
+pause
+;;
+
+2)
+wp --path="$SITE_PATH" theme list --fields=name,status,update,version --skip-plugins --skip-themes
+pause
+;;
+
+3)
+wp --path="$SITE_PATH" core update
+wp --path="$SITE_PATH" plugin update --all
+wp --path="$SITE_PATH" theme update --all
+wp --path="$SITE_PATH" rewrite flush --hard
+pause
+;;
+
+4)
+bash "$UTIL_DIR/fix-wordpress.sh" "$SITE_PATH"
+pause
+;;
+
+5)
+bash "$UTIL_DIR/deep-scan.sh" "$SITE_PATH"
+pause
+;;
+
+6)
+wp --path="$SITE_PATH" db check --skip-plugins --skip-themes
+pause
+;;
+
 0) break ;;
+
 esac
 
 done
@@ -312,15 +339,17 @@ done
 
 2)
 
-echo "1) Verify Core All"
-echo "2) Full Repair All"
-echo "3) Deep Scan All"
+echo "1) Verify Integrity All Sites"
+echo "2) Update All Sites"
+echo "3) Full Repair All"
+echo "4) Deep Scan All"
 read -p "Select option: " BULK
 
 case $BULK in
-1) run_bulk verify-core ;;
-2) run_bulk fix-wordpress ;;
-3) run_bulk deep-scan ;;
+1) run_bulk verify-all ;;
+2) run_bulk update-all ;;
+3) run_bulk fix-wordpress ;;
+4) run_bulk deep-scan ;;
 esac
 ;;
 
