@@ -261,16 +261,25 @@ echo
 
 read -p "Enter admin username: " USER
 
-LINK=$(wp --path="$SITE" login create "$USER" --skip-plugins --skip-themes 2>/dev/null)
-
-if [ -z "$LINK" ]; then
-echo "Failed to generate login link"
-else
-echo
-echo "One-Time Login Link:"
-echo "$LINK"
-echo
+if ! echo "$ADMINS" | grep -qx "$USER"; then
+echo "Invalid admin username"
+pause
+return
 fi
+
+NEW_PASS=$(openssl rand -base64 18)
+
+wp --path="$SITE" user update "$USER" --user_pass="$NEW_PASS" --skip-plugins --skip-themes >/dev/null 2>&1
+
+LOGIN_URL=$(wp --path="$SITE" option get siteurl --skip-plugins --skip-themes)
+
+echo
+echo "Admin Login URL:"
+echo "$LOGIN_URL/wp-login.php"
+echo
+echo "Username : $USER"
+echo "Password : $NEW_PASS"
+echo
 
 pause
 }
