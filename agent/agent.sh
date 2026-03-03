@@ -2,11 +2,58 @@
 
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 UTIL_DIR="$BASE_DIR/util"
+CONFIG_FILE="$BASE_DIR/agent/config.env"
 
-# auto-fix execute permissions
+mkdir -p "$BASE_DIR/agent"
+
+[ -f "$CONFIG_FILE" ] || echo 'LAST_UPDATE=""' > "$CONFIG_FILE"
+
+source "$CONFIG_FILE"
+
+# auto fix permissions
 chmod +x "$BASE_DIR"/agent/*.sh 2>/dev/null
 chmod +x "$UTIL_DIR"/*.sh 2>/dev/null
 chmod +x "$BASE_DIR"/scripts/*.sh 2>/dev/null
+
+check_update(){
+
+TODAY=$(date +%Y-%m-%d)
+
+[ "$LAST_UPDATE" == "$TODAY" ] && return
+
+echo "Checking updates..."
+
+cd "$BASE_DIR" || return
+
+git fetch origin > /dev/null 2>&1
+
+LOCAL=$(git rev-parse HEAD)
+REMOTE=$(git rev-parse origin/master)
+
+if [ "$LOCAL" != "$REMOTE" ]; then
+
+echo "Update found. Updating..."
+
+git reset --hard origin/master > /dev/null 2>&1
+
+chmod +x agent/*.sh util/*.sh scripts/*.sh 2>/dev/null
+
+sed -i "s/^LAST_UPDATE=.*/LAST_UPDATE=\"$TODAY\"/" "$CONFIG_FILE"
+
+echo "Update complete"
+sleep 1
+
+exec "$BASE_DIR/agent/agent.sh"
+
+else
+
+sed -i "s/^LAST_UPDATE=.*/LAST_UPDATE=\"$TODAY\"/" "$CONFIG_FILE"
+
+fi
+
+}
+
+check_update
 
 pause(){
 read -p "Press Enter to continue..."
@@ -34,20 +81,22 @@ DOMAIN=$(basename "$SITE")
 [[ "$DOMAIN" == *BACKUP* ]] && continue
 echo "$SITE"
 done
+
 }
 
 run_bulk(){
 
 ACTION="$1"
 
-echo
+clear
 printf "%-40s %s\n" "SITE" "STATUS"
-echo "--------------------------------------------------------------"
+echo "-------------------------------------------------------------"
 
 scan_sites | while read SITE
 do
 
 DOMAIN=$(get_domain "$SITE")
+
 printf "%-40s" "$DOMAIN"
 
 case $ACTION in
@@ -119,6 +168,7 @@ create_admin(){
 SITE="$1"
 
 read -p "Admin username: " USER
+
 PASS=$(openssl rand -base64 18)
 
 wp --path="$SITE" user create "$USER" "$USER@example.com" \
@@ -127,8 +177,8 @@ wp --path="$SITE" user create "$USER" "$USER@example.com" \
 
 echo
 echo "Admin Created"
-echo "Username : $USER"
-echo "Password : $PASS"
+echo "User : $USER"
+echo "Pass : $PASS"
 
 pause
 }
@@ -178,12 +228,13 @@ do
 
 clear
 
-echo "======================================="
-echo "        EINETIC WP FLEET MANAGER"
-echo "======================================="
+echo "================================="
+echo "        EINETIC WP FLEET"
+echo "================================="
 echo
 echo "1) Manage Single Site"
 echo "2) Bulk Operations"
+echo "3) Update Fleet"
 echo "0) Exit"
 echo
 
@@ -203,27 +254,27 @@ clear
 
 DOMAIN=$(get_domain "$SITE_PATH")
 
-echo "======================================="
-echo " SITE : $DOMAIN"
-echo "======================================="
+echo "================================="
+echo "SITE : $DOMAIN"
+echo "================================="
 echo
 echo "VERIFY"
-echo " 1) Verify Core"
-echo " 2) Verify Plugins"
-echo " 3) Verify Themes"
-echo " 4) Verify Database"
+echo "1) Verify Core"
+echo "2) Verify Plugins"
+echo "3) Verify Themes"
+echo "4) Verify Database"
 echo
 echo "REPAIR"
-echo " 5) Fix WordPress Core"
-echo " 6) Reinstall Plugins"
-echo " 7) Reinstall Themes"
-echo " 8) Update WordPress"
+echo "5) Fix WordPress Core"
+echo "6) Reinstall Plugins"
+echo "7) Reinstall Themes"
+echo "8) Update WordPress"
 echo
 echo "SECURITY"
-echo " 9) Optimize Database"
+echo "9) Optimize Database"
 echo "10) Regenerate Security Salts"
 echo
-echo "ADMIN USERS"
+echo "ADMIN"
 echo "11) List Admins"
 echo "12) Create Admin"
 echo "13) Delete Admin"
@@ -262,16 +313,15 @@ case $CH in
 esac
 
 done
-
 ;;
 
 2)
 
 clear
 
-echo "======================================="
-echo "          BULK OPERATIONS"
-echo "======================================="
+echo "================================="
+echo "        BULK OPERATIONS"
+echo "================================="
 echo
 echo "VERIFY"
 echo "1) Verify Core"
@@ -311,6 +361,24 @@ case $BULK in
 11) run_bulk fix-wordpress ;;
 
 esac
+;;
+
+3)
+
+echo "Updating fleet..."
+
+cd "$BASE_DIR" || exit
+
+git fetch origin
+git reset --hard origin/master
+
+chmod +x agent/*.sh util/*.sh scripts/*.sh
+
+echo "Update complete"
+
+sleep 1
+
+exec "$BASE_DIR/agent/agent.sh"
 
 ;;
 

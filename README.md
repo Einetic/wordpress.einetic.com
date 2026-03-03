@@ -1,32 +1,160 @@
-# Einetic WP Fleet
-
-**Einetic WP Fleet** is a lightweight CLI tool for managing multiple WordPress installations on a server.
-
-It is designed for environments such as:
-
-* Hostinger shared hosting
-* VPS servers
-* CloudPanel based servers
-* Generic LEMP/LAMP setups
-
-The tool discovers WordPress installations and allows quick operations like fixing WordPress core, reinstalling plugins/themes, backups, and administrative utilities using **wp-cli**.
+Here is a **short, clean, production-ready README** matching the tool you actually built.
+I simplified it and put **copy-paste execution first**, then features.
 
 ---
 
-# Core Philosophy
+# Einetic WP Fleet
 
-Einetic WP Fleet is built with three principles:
+**Einetic WP Fleet** is a lightweight CLI tool to manage multiple WordPress installations on a single server.
 
-* **Simple bash utilities**
-* **Platform-agnostic WordPress operations**
-* **Automation-ready architecture**
+It works on:
 
-Each operation is implemented as a standalone script so it can be used:
+* Hostinger shared hosting
+* VPS servers
+* CloudPanel servers
+* Generic LAMP / LEMP environments
 
-* from the CLI agent
-* via SSH
-* in automation scripts
-* by future APIs
+The tool automatically discovers WordPress installations and provides utilities to **verify, repair, update, and secure WordPress sites** using **wp-cli**.
+
+---
+
+# Quick Start (Copy-Paste)
+
+Install directly on a server:
+
+```bash
+curl -s https://raw.githubusercontent.com/Einetic/wordpress.einetic.com/master/scripts/install.sh | bash
+```
+
+Go to the installation directory:
+
+```bash
+cd ~/einetic-wp-fleet
+```
+
+Run the tool:
+
+```bash
+./agent/agent.sh
+```
+
+---
+
+# If Scripts Fail (Windows Users)
+
+If the repo was edited on Windows you may need to fix line endings.
+
+Run once:
+
+```bash
+sed -i 's/\r$//' agent/*.sh
+sed -i 's/\r$//' util/*.sh
+sed -i 's/\r$//' scripts/*.sh
+```
+
+Make scripts executable:
+
+```bash
+chmod +x agent/*.sh
+chmod +x util/*.sh
+chmod +x scripts/*.sh
+```
+
+Then run:
+
+```bash
+./agent/agent.sh
+```
+
+Note: The agent automatically fixes permissions on every run.
+
+---
+
+# Features
+
+## WordPress Verification
+
+* Verify WordPress core integrity
+* Verify plugins checksum
+* Verify themes checksum
+* Verify database integrity
+
+## WordPress Repair
+
+* Reinstall WordPress core
+* Reinstall all plugins
+* Reinstall all themes
+* Update WordPress
+* Full WordPress repair
+
+## Database Utilities
+
+* Database check
+* Database optimization
+
+## Security Utilities
+
+* Regenerate WordPress salts
+* List administrator users
+* Create new administrator
+* Delete administrator
+* Reset administrator password
+
+## Bulk Operations
+
+Run actions across **all WordPress sites on the server**:
+
+* Core verification
+* Plugin verification
+* Theme verification
+* Database verification
+* Core repair
+* Plugin reinstall
+* Theme reinstall
+* WordPress update
+* Database optimization
+* Salt regeneration
+* Full WordPress repair
+
+## Fleet Management
+
+* Automatic WordPress site discovery
+* Works with Hostinger and CloudPanel structures
+* Daily automatic update check
+* Manual update option in menu
+
+---
+
+# Supported WordPress Locations
+
+Hostinger structure:
+
+```
+/home/<user>/domains/<domain>/public_html
+```
+
+CloudPanel structure:
+
+```
+/home/<user>/htdocs/<domain>
+```
+
+---
+
+# Updating the Tool
+
+Update from the menu:
+
+```
+Update Fleet
+```
+
+Or manually:
+
+```bash
+cd ~/einetic-wp-fleet
+git pull
+```
 
 ---
 
@@ -37,199 +165,19 @@ agent/
     agent.sh
     config.sample.env
 
-core/
-    detect-platform.sh
-    env.sh
-    logger.sh
-
 util/
-    find-sites.sh
     list-sites.sh
-    get-site-path.sh
-    backup-site.sh
-    fix-site.sh
-    login-link.sh
     reinstall-core.sh
     reinstall-plugins.sh
     reinstall-themes.sh
     update-wordpress.sh
-    wp-cli.sh
+    fix-wordpress.sh
+    core.sh
 
 scripts/
     install.sh
     update.sh
-
-service/
-    einetic-wp-fleet.service
-
-logs/
-tmp/
 ```
-
----
-
-# Requirements
-
-Server requirements:
-
-* Linux server
-* Bash
-* wp-cli installed
-* WordPress sites available on the server
-
-Typical WordPress paths supported:
-
-Hostinger:
-
-```
-/home/<user>/domains/<domain>/public_html
-```
-
-CloudPanel:
-
-```
-/home/<user>/htdocs/<domain>
-```
-
----
-
-# Installation
-
-Install the tool using:
-
-```
-curl -s https://raw.githubusercontent.com/Einetic/wordpress.einetic.com/master/scripts/install.sh | bash
-```
-
-This will:
-
-1. Clone the repository
-2. Create working directories
-3. Prepare the tool environment
-
-Default install location:
-
-```
-~/einetic-wp-fleet
-```
-
-or on root servers:
-
-```
-/opt/einetic-wp-fleet
-```
-
----
-
-# Running the Tool
-
-Go to the installation directory:
-
-```
-cd ~/einetic-wp-fleet
-```
-
-Before running for the first time you may need to ensure:
-
-### 1️⃣ Shell scripts use LF line endings
-
-If you developed on Windows run:
-
-```
-sed -i 's/\r$//' agent/*.sh
-sed -i 's/\r$//' util/*.sh
-sed -i 's/\r$//' scripts/*.sh
-```
-
-### 2️⃣ Make scripts executable
-
-```
-chmod +x agent/*.sh
-chmod +x util/*.sh
-chmod +x scripts/*.sh
-```
-
-### 3️⃣ Run the agent
-
-```
-./agent/agent.sh
-```
-
-The tool will:
-
-1. discover WordPress sites
-2. display a numbered list
-3. allow selecting a site
-4. execute management utilities
-
----
-
-# Updating the Tool
-
-To update the installed version:
-
-```
-bash scripts/update.sh
-```
-
-or manually:
-
-```
-git pull
-```
-
----
-
-# Development Notes (Windows)
-
-If developing on Windows:
-
-Create `.gitattributes` to enforce Linux line endings:
-
-```
-*.sh text eol=lf
-```
-
-This prevents CRLF issues when running scripts on Linux servers.
-
----
-
-# Utility Script Design Rules
-
-Every utility script should:
-
-* work independently
-* accept a WordPress path
-* produce clear output
-* rely on wp-cli where possible
-
-Example usage:
-
-```
-bash util/update-wordpress.sh /path/to/site
-```
-
----
-
-# Future Roadmap
-
-### Phase 1
-
-* WordPress repair utilities
-* improved site discovery
-* platform detection
-
-### Phase 2
-
-* background fleet agent
-* remote command execution
-* centralized management
-
-### Phase 3
-
-* malware monitoring
-* vulnerability scanning
-* automatic repair
 
 ---
 
@@ -248,6 +196,16 @@ backup archives
 
 # License
 
-License to be decided (MIT recommended).
+MIT (recommended)
 
---- 
+---
+
+If you want, I can also give you a **much better README used by professional GitHub projects** that adds:
+
+* screenshots
+* feature comparison table
+* architecture diagram
+* badges
+* install statistics
+
+It will make your repo look **10× more professional**.
