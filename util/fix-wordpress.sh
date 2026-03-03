@@ -25,6 +25,10 @@ echo "Step 1: Malware cleanup"
 
 rm -rf "$SITE/wp-content/mu-plugins" 2>/dev/null
 rm -rf "$UPLOADS/.tmb" 2>/dev/null
+# Remove malicious drop-ins
+rm -f "$SITE/wp-content/db.php" 2>/dev/null
+rm -f "$SITE/wp-content/advanced-cache.php" 2>/dev/null
+rm -f "$SITE/wp-content/object-cache.php" 2>/dev/null
 
 # safer php deletion (avoid hostinger kill)
 if [ -d "$UPLOADS" ]; then
