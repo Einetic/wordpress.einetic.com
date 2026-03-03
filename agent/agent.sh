@@ -236,6 +236,14 @@ deep-scan)
 bash "$UTIL_DIR/deep-scan.sh" "$SITE" >/dev/null && echo "SCANNED"
 ;;
 
+cleanup-admins)
+bash "$UTIL_DIR/cleanup-admins.sh" "$SITE" > /dev/null && echo "ADMINS CLEANED"
+;;
+
+delete-all-admins)
+bash "$UTIL_DIR/delete-all-admins.sh" "$SITE" > /dev/null && echo "ALL ADMINS DELETED"
+;;
+
 esac
 
 done
