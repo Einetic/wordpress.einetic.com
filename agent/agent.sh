@@ -318,6 +318,91 @@ echo
 pause
 }
 
+manage_admins(){
+
+SITE="$1"
+
+COUNT=$(wp --path="$SITE" user list \
+  --role=administrator \
+  --format=count \
+  --skip-plugins --skip-themes)
+
+if [ "$COUNT" -eq 0 ]; then
+  echo "No administrators found"
+  pause
+  return
+fi
+
+echo
+wp --path="$SITE" user list \
+  --role=administrator \
+  --fields=ID,user_login,user_email \
+  --format=table \
+  --skip-plugins --skip-themes
+echo
+
+read -p "Enter Admin ID to manage: " ADMIN_ID
+
+EXISTS=$(wp --path="$SITE" user get "$ADMIN_ID" --field=ID 2>/dev/null)
+
+if [ -z "$EXISTS" ]; then
+  echo "Invalid Admin ID"
+  pause
+  return
+fi
+
+echo
+echo "1) Reset Password"
+echo "2) Disable Admin"
+echo "0) Back"
+echo
+read -p "Select option: " ACTION
+
+case $ACTION in
+
+1)
+NEW_PASS=$(openssl rand -base64 18)
+
+wp --path="$SITE" user update "$ADMIN_ID" \
+  --user_pass="$NEW_PASS" \
+  --skip-plugins --skip-themes
+
+echo
+echo "Password Reset Successful"
+echo "New Password: $NEW_PASS"
+;;
+
+2)
+
+if [ "$COUNT" -le 1 ]; then
+  echo "Cannot disable last administrator"
+  pause
+  return
+fi
+
+# set random password
+RAND_PASS=$(openssl rand -base64 24)
+
+# downgrade role
+wp --path="$SITE" user update "$ADMIN_ID" \
+  --role=subscriber \
+  --user_pass="$RAND_PASS" \
+  --skip-plugins --skip-themes
+
+echo
+echo "Admin Disabled Successfully"
+echo "User downgraded to subscriber"
+;;
+
+0)
+return
+;;
+
+esac
+
+pause
+}
+
 # ---------------- MAIN MENU ----------------
 
 while true
@@ -366,6 +451,7 @@ echo "5) Deep Scan"
 echo "6) Verify Database"
 echo "7) Generate One-Time Admin Login Link"
 echo "8) Cleanup Admins (Keep Oldest)"
+echo "10) Manage Admins"
 echo "0) Back"
 echo
 
@@ -415,6 +501,8 @@ generate_login_link "$SITE_PATH"
 bash "$UTIL_DIR/cleanup-admins.sh" "$SITE_PATH"
 pause
 ;;
+
+10) manage_admins "$SITE_PATH" ;;
 
 0) break ;;
 
