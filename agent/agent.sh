@@ -1,9 +1,15 @@
 #!/bin/bash
 
-UTIL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../util" && pwd)"
+BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+UTIL_DIR="$BASE_DIR/util"
+
+# auto-fix execute permissions
+chmod +x "$BASE_DIR"/agent/*.sh 2>/dev/null
+chmod +x "$UTIL_DIR"/*.sh 2>/dev/null
+chmod +x "$BASE_DIR"/scripts/*.sh 2>/dev/null
 
 pause(){
-read -p "Press Enter..."
+read -p "Press Enter to continue..."
 }
 
 get_domain(){
@@ -34,11 +40,14 @@ run_bulk(){
 
 ACTION="$1"
 
+echo
+printf "%-40s %s\n" "SITE" "STATUS"
+echo "--------------------------------------------------------------"
+
 scan_sites | while read SITE
 do
 
 DOMAIN=$(get_domain "$SITE")
-
 printf "%-40s" "$DOMAIN"
 
 case $ACTION in
@@ -70,12 +79,12 @@ echo "CORE FIXED"
 
 fix-plugins)
 bash "$UTIL_DIR/reinstall-plugins.sh" "$SITE" > /dev/null
-echo "PLUGINS REINSTALLED"
+echo "PLUGINS FIXED"
 ;;
 
 fix-themes)
 bash "$UTIL_DIR/reinstall-themes.sh" "$SITE" > /dev/null
-echo "THEMES REINSTALLED"
+echo "THEMES FIXED"
 ;;
 
 update-core)
@@ -85,12 +94,17 @@ echo "UPDATED"
 
 optimize-db)
 wp --path="$SITE" db optimize --skip-plugins --skip-themes > /dev/null
-echo "DB OPTIMIZED"
+echo "OPTIMIZED"
 ;;
 
 regenerate-salts)
 wp --path="$SITE" config shuffle-salts --skip-plugins --skip-themes > /dev/null
-echo "SALTS REGENERATED"
+echo "SALTS RESET"
+;;
+
+fix-wordpress)
+bash "$UTIL_DIR/fix-wordpress.sh" "$SITE" > /dev/null
+echo "FULL REPAIR DONE"
 ;;
 
 esac
@@ -108,11 +122,13 @@ read -p "Admin username: " USER
 PASS=$(openssl rand -base64 18)
 
 wp --path="$SITE" user create "$USER" "$USER@example.com" \
---role=administrator --user_pass="$PASS" --skip-plugins --skip-themes > /dev/null
+--role=administrator --user_pass="$PASS" \
+--skip-plugins --skip-themes > /dev/null
 
-echo "Created admin"
-echo "User: $USER"
-echo "Pass: $PASS"
+echo
+echo "Admin Created"
+echo "Username : $USER"
+echo "Password : $PASS"
 
 pause
 }
@@ -133,6 +149,8 @@ read -p "Delete username: " USER
 
 wp --path="$SITE" user delete "$USER" --yes --skip-plugins --skip-themes
 
+echo "Deleted $USER"
+
 pause
 }
 
@@ -146,8 +164,10 @@ read -p "Username: " USER
 
 PASS=$(openssl rand -base64 18)
 
-wp --path="$SITE" user update "$USER" --user_pass="$PASS" --skip-plugins --skip-themes
+wp --path="$SITE" user update "$USER" --user_pass="$PASS" \
+--skip-plugins --skip-themes
 
+echo
 echo "New password: $PASS"
 
 pause
@@ -156,11 +176,18 @@ pause
 while true
 do
 
-echo "==== Einetic WP Fleet ===="
-echo "1 Site"
-echo "2 Bulk"
-echo "0 Exit"
-read -p ">" MAIN
+clear
+
+echo "======================================="
+echo "        EINETIC WP FLEET MANAGER"
+echo "======================================="
+echo
+echo "1) Manage Single Site"
+echo "2) Bulk Operations"
+echo "0) Exit"
+echo
+
+read -p "Select option: " MAIN
 
 case $MAIN in
 
@@ -172,26 +199,42 @@ SITE_PATH=$(bash "$UTIL_DIR/list-sites.sh" | tee /dev/tty | tail -n 1)
 while true
 do
 
+clear
+
 DOMAIN=$(get_domain "$SITE_PATH")
 
-echo "==== $DOMAIN ===="
-echo "1 Verify Core"
-echo "2 Verify Plugins"
-echo "3 Verify Themes"
-echo "4 Verify DB"
-echo "5 Fix Core"
-echo "6 Reinstall Plugins"
-echo "7 Reinstall Themes"
-echo "8 Update WP"
-echo "9 Optimize DB"
-echo "10 Regenerate Salts"
-echo "11 List Admins"
-echo "12 Create Admin"
-echo "13 Delete Admin"
-echo "14 Reset Admin Password"
-echo "0 Back"
+echo "======================================="
+echo " SITE : $DOMAIN"
+echo "======================================="
+echo
+echo "VERIFY"
+echo " 1) Verify Core"
+echo " 2) Verify Plugins"
+echo " 3) Verify Themes"
+echo " 4) Verify Database"
+echo
+echo "REPAIR"
+echo " 5) Fix WordPress Core"
+echo " 6) Reinstall Plugins"
+echo " 7) Reinstall Themes"
+echo " 8) Update WordPress"
+echo
+echo "SECURITY"
+echo " 9) Optimize Database"
+echo "10) Regenerate Security Salts"
+echo
+echo "ADMIN USERS"
+echo "11) List Admins"
+echo "12) Create Admin"
+echo "13) Delete Admin"
+echo "14) Reset Admin Password"
+echo
+echo "15) Full WordPress Repair"
+echo
+echo "0) Back"
+echo
 
-read -p ">" CH
+read -p "Select option: " CH
 
 case $CH in
 
@@ -212,6 +255,7 @@ case $CH in
 12) create_admin "$SITE_PATH" ;;
 13) delete_admin "$SITE_PATH" ;;
 14) reset_admin_password "$SITE_PATH" ;;
+15) bash "$UTIL_DIR/fix-wordpress.sh" "$SITE_PATH" ; pause ;;
 
 0) break ;;
 
@@ -223,18 +267,32 @@ done
 
 2)
 
-echo "==== Bulk ===="
-echo "1 Verify Core"
-echo "2 Verify Plugins"
-echo "3 Verify Themes"
-echo "4 Verify DB"
-echo "5 Fix Core"
-echo "6 Reinstall Plugins"
-echo "7 Reinstall Themes"
-echo "8 Update WP"
-echo "9 Optimize DB"
-echo "10 Regenerate Salts"
-read -p ">" BULK
+clear
+
+echo "======================================="
+echo "          BULK OPERATIONS"
+echo "======================================="
+echo
+echo "VERIFY"
+echo "1) Verify Core"
+echo "2) Verify Plugins"
+echo "3) Verify Themes"
+echo "4) Verify Database"
+echo
+echo "REPAIR"
+echo "5) Fix Core"
+echo "6) Reinstall Plugins"
+echo "7) Reinstall Themes"
+echo "8) Update WordPress"
+echo
+echo "SECURITY"
+echo "9) Optimize Database"
+echo "10) Regenerate Salts"
+echo
+echo "11) Full WordPress Repair"
+echo
+
+read -p "Select option: " BULK
 
 case $BULK in
 
@@ -250,6 +308,7 @@ case $BULK in
 
 9) run_bulk optimize-db ;;
 10) run_bulk regenerate-salts ;;
+11) run_bulk fix-wordpress ;;
 
 esac
 
