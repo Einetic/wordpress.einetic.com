@@ -243,6 +243,38 @@ done
 pause
 }
 
+generate_login_link(){
+
+SITE="$1"
+
+ADMINS=$(wp --path="$SITE" user list --role=administrator --field=user_login --skip-plugins --skip-themes)
+
+if [ -z "$ADMINS" ]; then
+echo "No admin users found"
+pause
+return
+fi
+
+echo "Available Admin Users:"
+echo "$ADMINS"
+echo
+
+read -p "Enter admin username: " USER
+
+LINK=$(wp --path="$SITE" login create "$USER" --skip-plugins --skip-themes 2>/dev/null)
+
+if [ -z "$LINK" ]; then
+echo "Failed to generate login link"
+else
+echo
+echo "One-Time Login Link:"
+echo "$LINK"
+echo
+fi
+
+pause
+}
+
 # ---------------- MAIN MENU ----------------
 
 while true
@@ -289,6 +321,7 @@ echo "3) Update Everything"
 echo "4) Full WordPress Repair"
 echo "5) Deep Scan"
 echo "6) Verify Database"
+echo "7) Generate One-Time Admin Login Link"
 echo "0) Back"
 echo
 
@@ -328,6 +361,10 @@ pause
 6)
 wp --path="$SITE_PATH" db check --skip-plugins --skip-themes
 pause
+;;
+
+7)
+generate_login_link "$SITE_PATH"
 ;;
 
 0) break ;;
