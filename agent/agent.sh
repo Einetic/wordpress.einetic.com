@@ -438,6 +438,8 @@ case $BULK in
 3) run_bulk fix-wordpress ;;
 4) run_bulk deep-scan ;;
 5) run_bulk cleanup-admins ;;
+esac
+;;
 
 3)
 cd "$BASE_DIR" || exit
