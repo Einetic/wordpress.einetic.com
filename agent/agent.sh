@@ -403,6 +403,67 @@ esac
 pause
 }
 
+replace_url_only(){
+
+SITE="$1"
+
+REAL_URL=$(wp --path="$SITE" option get siteurl --skip-plugins --skip-themes 2>/dev/null)
+
+if [ -z "$REAL_URL" ]; then
+  echo "Could not detect current site URL"
+  pause
+  return
+fi
+
+REAL_DOMAIN=$(echo "$REAL_URL" | sed -E 's#https?://##' | sed 's#/.*##')
+REAL_PROTOCOL=$(echo "$REAL_URL" | grep -oE '^https?')
+
+echo
+echo "Current Site URL : $REAL_URL"
+echo
+read -p "Enter old domain or temporary URL: " OLD_INPUT
+
+OLD_INPUT=$(echo "$OLD_INPUT" | xargs)
+OLD_INPUT=${OLD_INPUT#http://}
+OLD_INPUT=${OLD_INPUT#https://}
+OLD_INPUT=${OLD_INPUT%/}
+
+if [ -z "$OLD_INPUT" ]; then
+  echo "Invalid input"
+  pause
+  return
+fi
+
+if [ "$OLD_INPUT" == "$REAL_DOMAIN" ]; then
+  echo "Old domain and current domain are same. Nothing to replace."
+  pause
+  return
+fi
+
+echo
+echo "About to replace:"
+echo "$OLD_INPUT  →  $REAL_DOMAIN"
+echo
+read -p "Proceed? (y/n): " CONFIRM
+
+[ "$CONFIRM" != "y" ] && return
+
+wp --path="$SITE" search-replace "https://$OLD_INPUT" "https://$REAL_DOMAIN" --all-tables --precise --skip-plugins --skip-themes
+wp --path="$SITE" search-replace "http://$OLD_INPUT" "http://$REAL_DOMAIN" --all-tables --precise --skip-plugins --skip-themes
+wp --path="$SITE" search-replace "$OLD_INPUT" "$REAL_DOMAIN" --all-tables --precise --skip-plugins --skip-themes
+
+wp --path="$SITE" option update siteurl "$REAL_PROTOCOL://$REAL_DOMAIN" --skip-plugins --skip-themes
+wp --path="$SITE" option update home "$REAL_PROTOCOL://$REAL_DOMAIN" --skip-plugins --skip-themes
+
+wp --path="$SITE" rewrite flush --hard
+wp --path="$SITE" transient delete --all >/dev/null 2>&1
+wp --path="$SITE" cache flush >/dev/null 2>&1
+wp --path="$SITE" elementor flush_css >/dev/null 2>&1
+
+echo
+echo "URL replacement complete"
+pause
+}
 # ---------------- MAIN MENU ----------------
 
 while true
@@ -451,7 +512,8 @@ echo "5) Deep Scan"
 echo "6) Verify Database"
 echo "7) Generate One-Time Admin Login Link"
 echo "8) Cleanup Admins (Keep Oldest)"
-echo "10) Manage Admins"
+echo "9) Manage Admins"
+echo "10) Replace Domain / Temporary URL"
 echo "0) Back"
 echo
 
@@ -502,7 +564,9 @@ bash "$UTIL_DIR/cleanup-admins.sh" "$SITE_PATH"
 pause
 ;;
 
-10) manage_admins "$SITE_PATH" ;;
+9) manage_admins "$SITE_PATH" ;;
+
+10) replace_url_only "$SITE_PATH" ;;
 
 0) break ;;
 
