@@ -1,0 +1,9 @@
+[Unit]
+Description=Einetic WP Fleet Monitor
+After=network.target
+
+[Service]
+Type=oneshot
+User=__USER__
+WorkingDirectory=__BASE_DIR__
+ExecStart=__MONITOR_SCRIPT__

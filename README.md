@@ -1,8 +1,3 @@
-Here is a **short, clean, production-ready README** matching the tool you actually built.
-I simplified it and put **copy-paste execution first**, then features.
-
----
-
 # Einetic WP Fleet
 
 **Einetic WP Fleet** is a lightweight CLI tool to manage multiple WordPress installations on a single server.
@@ -197,15 +192,3 @@ backup archives
 # License
 
 MIT (recommended)
-
----
-
-If you want, I can also give you a **much better README used by professional GitHub projects** that adds:
-
-* screenshots
-* feature comparison table
-* architecture diagram
-* badges
-* install statistics
-
-It will make your repo look **10× more professional**.
