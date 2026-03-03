@@ -255,10 +255,34 @@ generate_login_link(){
 
 SITE="$1"
 
-ADMINS=$(wp --path="$SITE" user list --role=administrator --field=user_login --skip-plugins --skip-themes)
+ADMINS=$(wp --path="$SITE" user list --role=administrator --field=user_login --skip-plugins --skip-themes 2>/dev/null)
 
 if [ -z "$ADMINS" ]; then
-echo "No admin users found"
+
+echo "No admin found. Creating recovery admin: einetic"
+
+NEW_PASS=$(openssl rand -base64 18)
+
+wp --path="$SITE" user create einetic einetic@localhost.local \
+--role=administrator \
+--user_pass="$NEW_PASS" \
+--skip-plugins --skip-themes >/dev/null 2>&1
+
+if [ $? -ne 0 ]; then
+echo "Failed to create recovery admin"
+pause
+return
+fi
+
+LOGIN_URL=$(wp --path="$SITE" option get siteurl --skip-plugins --skip-themes)
+
+echo
+echo "Recovery Admin Created"
+echo "Login URL : $LOGIN_URL/wp-login.php"
+echo "Username  : einetic"
+echo "Password  : $NEW_PASS"
+echo
+
 pause
 return
 fi
@@ -277,7 +301,9 @@ fi
 
 NEW_PASS=$(openssl rand -base64 18)
 
-wp --path="$SITE" user update "$USER" --user_pass="$NEW_PASS" --skip-plugins --skip-themes >/dev/null 2>&1
+wp --path="$SITE" user update "$USER" \
+--user_pass="$NEW_PASS" \
+--skip-plugins --skip-themes >/dev/null 2>&1
 
 LOGIN_URL=$(wp --path="$SITE" option get siteurl --skip-plugins --skip-themes)
 
