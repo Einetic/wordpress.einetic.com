@@ -13,7 +13,6 @@ fi
 echo "Scanning themes..."
 
 ACTIVE_THEME=$(safe_wp "$SITE_PATH" theme list --status=active --field=name 2>/dev/null | head -n1)
-
 THEMES=$(safe_wp "$SITE_PATH" theme list --field=name 2>/dev/null)
 
 if [ -z "$THEMES" ]; then
@@ -50,5 +49,11 @@ else
 echo "No active theme detected — activating twentytwentyfive"
 safe_wp "$SITE_PATH" theme activate twentytwentyfive
 fi
+
+echo "Flushing rewrite rules"
+safe_wp "$SITE_PATH" rewrite flush --hard
+
+echo "Flushing Elementor CSS (if exists)"
+safe_wp "$SITE_PATH" elementor flush_css 2>/dev/null
 
 echo "Themes repaired"
