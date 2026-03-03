@@ -263,7 +263,7 @@ echo "No admin found. Creating recovery admin: einetic"
 
 NEW_PASS=$(openssl rand -base64 18)
 
-wp --path="$SITE" user create einetic einetic@localhost.local \
+wp --path="$SITE" user create einetic wp@eineticsite.com \
 --role=administrator \
 --user_pass="$NEW_PASS" \
 --skip-plugins --skip-themes >/dev/null 2>&1
@@ -366,7 +366,6 @@ echo "5) Deep Scan"
 echo "6) Verify Database"
 echo "7) Generate One-Time Admin Login Link"
 echo "8) Cleanup Admins (Keep Oldest)"
-echo "9) Delete ALL Admins (Danger)"
 echo "0) Back"
 echo
 
@@ -417,15 +416,6 @@ bash "$UTIL_DIR/cleanup-admins.sh" "$SITE_PATH"
 pause
 ;;
 
-9)
-echo "WARNING: This will delete ALL administrators."
-read -p "Type Y to confirm: " CONFIRM
-if [ "$CONFIRM" == "Y" ]; then
-bash "$UTIL_DIR/delete-all-admins.sh" "$SITE_PATH"
-fi
-pause
-;;
-
 0) break ;;
 
 esac
@@ -440,7 +430,6 @@ echo "2) Update All Sites"
 echo "3) Full Repair All"
 echo "4) Deep Scan All"
 echo "5) Cleanup Admins (Keep Oldest) All Sites"
-echo "6) Delete ALL Admins All Sites (Danger)"
 read -p "Select option: " BULK
 
 case $BULK in
@@ -449,13 +438,6 @@ case $BULK in
 3) run_bulk fix-wordpress ;;
 4) run_bulk deep-scan ;;
 5) run_bulk cleanup-admins ;;
-6)
-echo "WARNING: This will delete ALL admins on ALL sites."
-read -p "Type YES to confirm: " CONFIRM
-[ "$CONFIRM" == "YES" ] && run_bulk delete-all-admins
-;;
-esac
-;;
 
 3)
 cd "$BASE_DIR" || exit

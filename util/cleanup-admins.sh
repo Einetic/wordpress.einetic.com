@@ -10,7 +10,8 @@ if [ -z "$SITE" ]; then
   exit 1
 fi
 
-echo "Cleaning admins for $SITE"
+echo "Cleaning admins safely for $SITE"
+echo
 
 # Get oldest admin ID
 OLDEST=$(wp_exec "$SITE" user list \
@@ -26,17 +27,19 @@ if [ -z "$OLDEST" ]; then
 fi
 
 echo "Keeping oldest admin ID: $OLDEST"
+echo
 
-# Delete others
+# Delete others safely with reassignment
 wp_exec "$SITE" user list \
   --role=administrator \
   --field=ID \
   --skip-plugins --skip-themes | while read ID
 do
   if [ "$ID" != "$OLDEST" ]; then
-    echo "Deleting admin ID: $ID"
-    wp_exec "$SITE" user delete "$ID" --yes --skip-plugins --skip-themes
+    echo "Reassigning and deleting admin ID: $ID"
+    wp_exec "$SITE" user delete "$ID" --reassign="$OLDEST" --yes --skip-plugins --skip-themes
   fi
 done
 
-echo "Admin cleanup complete"
+echo
+echo "Admin cleanup complete (content preserved)"
