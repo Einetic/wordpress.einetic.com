@@ -52,7 +52,16 @@ check_update
 
 # ---------------- SERVICE MANAGEMENT ----------------
 
+supports_systemd(){
+
+command -v systemctl >/dev/null 2>&1 || return 1
+command -v sudo >/dev/null 2>&1 || return 1
+return 0
+}
+
 install_service(){
+
+supports_systemd || return 1
 
 if [ ! -f "$SYSTEMD_SERVICE" ]; then
 
@@ -69,7 +78,7 @@ sudo cp "$TMP_SERVICE" "$SYSTEMD_SERVICE"
 sudo cp "$TIMER_TEMPLATE" "$SYSTEMD_TIMER"
 
 sudo systemctl daemon-reload
-sudo systemctl enable "$SERVICE_NAME.timer"
+sudo systemctl enable "$SERVICE_NAME.timer" >/dev/null 2>&1
 
 rm -f "$TMP_SERVICE"
 
@@ -78,25 +87,88 @@ fi
 }
 
 start_service(){
+
+if ! supports_systemd; then
+echo
+echo "Monitor Service not supported on this server (shared hosting detected)"
+pause
+return
+fi
+
 install_service
+
 sudo systemctl start "$SERVICE_NAME.timer"
+
+if [ $? -eq 0 ]; then
+echo "Monitor Service started successfully"
 echo "$(date) - Service started" >> "$LOG_DIR/service.log"
+else
+echo "Failed to start Monitor Service"
+fi
+
+pause
 }
 
 stop_service(){
-sudo systemctl stop "$SERVICE_NAME.timer" 2>/dev/null
+
+if ! supports_systemd; then
+echo
+echo "Monitor Service not supported on this server"
+pause
+return
+fi
+
+if ! sudo systemctl is-active --quiet "$SERVICE_NAME.timer"; then
+echo "Monitor Service is not running"
+pause
+return
+fi
+
+sudo systemctl stop "$SERVICE_NAME.timer"
+
+echo "Monitor Service stopped"
 echo "$(date) - Service stopped" >> "$LOG_DIR/service.log"
+
+pause
 }
 
 restart_service(){
+
+if ! supports_systemd; then
+echo
+echo "Monitor Service not supported on this server"
+pause
+return
+fi
+
 install_service
+
 sudo systemctl restart "$SERVICE_NAME.timer"
+
+echo "Monitor Service restarted"
 echo "$(date) - Service restarted" >> "$LOG_DIR/service.log"
+
+pause
 }
 
 service_status(){
+
+if ! supports_systemd; then
+echo
+echo "Monitor Service not supported on this server"
+pause
+return
+fi
+
+if [ ! -f "$SYSTEMD_SERVICE" ]; then
+echo "Monitor Service not installed"
+pause
+return
+fi
+
 sudo systemctl status "$SERVICE_NAME.timer" --no-pager
-read -p "Press Enter..."
+
+pause
 }
 
 # ---------------- COMMON FUNCTIONS ----------------
