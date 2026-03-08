@@ -115,49 +115,6 @@ wp_exec "$SITE" core download --skip-content --force
 echo "Step 3: Reinstall plugins"
 bash "$SCRIPT_DIR/reinstall-plugins.sh" "$SITE"
 
-echo "Checking plugin health"
-
-safe_wp "$SITE" plugin list --field=name | while read plugin
-do
-
-  UPDATED=$(safe_wp "$SITE" plugin get "$plugin" --field=last_updated 2>/dev/null)
-  VERSION=$(safe_wp "$SITE" plugin get "$plugin" --field=version 2>/dev/null)
-  STATUS=$(safe_wp "$SITE" plugin get "$plugin" --field=status 2>/dev/null)
-  SOURCE=$(safe_wp "$SITE" plugin get "$plugin" --field=update_source 2>/dev/null)
-
-  # -------------------------------------------------
-  # Detect plugins not from WordPress repo
-  # -------------------------------------------------
-
-  if [ "$SOURCE" != "wordpress.org" ]; then
-
-    echo "Plugin $plugin not from WordPress.org"
-
-    safe_wp "$SITE" plugin deactivate "$plugin" >/dev/null 2>&1
-    safe_wp "$SITE" plugin auto-updates disable "$plugin" >/dev/null 2>&1
-
-    echo "Plugin $plugin deactivated and auto-update disabled"
-
-    continue
-  fi
-
-  # -------------------------------------------------
-  # Detect abandoned plugins (2+ years)
-  # -------------------------------------------------
-
-  if [ -n "$UPDATED" ]; then
-
-    YEARS=$(( ($(date +%s) - $(date -d "$UPDATED" +%s)) / 31536000 ))
-
-    if [ "$YEARS" -ge 2 ]; then
-      safe_wp "$SITE" plugin deactivate "$plugin" >/dev/null 2>&1
-      echo "Plugin $plugin appears abandoned (last update: $UPDATED)"
-    fi
-
-  fi
-
-done
-
 # ---------------------------------
 # Step 5: Reinstall themes
 # ---------------------------------
