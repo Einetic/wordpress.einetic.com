@@ -10,44 +10,12 @@ echo "Usage: reinstall-plugins.sh <site_path>"
 exit 1
 fi
 
-echo "Scanning installed plugins..."
+PLUGINS=$(safe_wp "$SITE_PATH" plugin list --field=name)
 
-BAD_PLUGINS="wp-file-manager file-manager adminer wp-automatic wp-automatic-pro"
-
-ACTIVE_PLUGINS=$(safe_wp "$SITE_PATH" plugin list --status=active --field=name 2>/dev/null)
-INACTIVE_PLUGINS=$(safe_wp "$SITE_PATH" plugin list --status=inactive --field=name 2>/dev/null)
-
-echo "Reinstalling active plugins..."
-
-for plugin in $ACTIVE_PLUGINS
+for plugin in $PLUGINS
 do
-
-if echo "$BAD_PLUGINS" | grep -qw "$plugin"; then
-echo "Skipping dangerous plugin $plugin"
-safe_wp "$SITE_PATH" plugin deactivate "$plugin" >/dev/null 2>&1
-safe_wp "$SITE_PATH" plugin delete "$plugin" >/dev/null 2>&1
-continue
-fi
-
-echo "Reinstalling active plugin $plugin"
-safe_wp "$SITE_PATH" plugin install "$plugin" --force --activate
-
-done
-
-echo "Reinstalling inactive plugins..."
-
-for plugin in $INACTIVE_PLUGINS
-do
-
-if echo "$BAD_PLUGINS" | grep -qw "$plugin"; then
-echo "Skipping dangerous plugin $plugin"
-safe_wp "$SITE_PATH" plugin delete "$plugin" >/dev/null 2>&1
-continue
-fi
-
-echo "Reinstalling inactive plugin $plugin"
+echo "Reinstalling $plugin"
 safe_wp "$SITE_PATH" plugin install "$plugin" --force
-
 done
 
 echo "Plugin reinstall complete"
