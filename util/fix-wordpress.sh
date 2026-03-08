@@ -47,7 +47,16 @@ rm -rf "$SITE/wp-content/upgrade-temp-backup" 2>/dev/null
 rm -rf "$SITE/.wp-temp" 2>/dev/null
 rm -rf "$SITE/.wp-cache" 2>/dev/null
 rm -rf "$SITE/.cache" 2>/dev/null
-rm -rf "$SITE/.backups" 2>/dev/nul
+rm -rf "$SITE/.backups" 2>/dev/null
+rm -rf "$SITE/.logs" 2>/dev/null
+rm -rf "$SITE/.old" 2>/dev/null
+rm -rf "$SITE/.trash" 2>/dev/null
+rm -rf "$SITE/.temp" 2>/dev/null
+rm -rf "$SITE/.htaccess_old" 2>/dev/null
+rm -rf "$SITE/.htaccess.bak" 2>/dev/null
+rm -rf "$SITE/.htaccess.backup" 2>/dev/null
+rm -rf "$SITE/.htaccess.bak" 2>/dev/null
+rm -rf "$SITE/.htaccess_old" 2>/dev/null
 
 # safer php deletion (avoid hostinger kill)
 if [ -d "$UPLOADS" ]; then

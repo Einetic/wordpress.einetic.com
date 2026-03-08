@@ -18,13 +18,10 @@ wp_exec() {
     shift
 
     if [[ "$SITE_PATH" == /home/*/htdocs/* ]]; then
-        # CloudPanel structure
         USER=$(echo "$SITE_PATH" | cut -d'/' -f3)
-
         sudo -u "$USER" -- wp "$@" --path="$SITE_PATH"
 
     elif [[ "$SITE_PATH" == */domains/*/public_html ]]; then
-        # Hostinger / shared hosting structure
         wp "$@" --path="$SITE_PATH"
 
     else
@@ -43,7 +40,7 @@ SITE="$1"
 shift
 
 WP_CONTENT="$SITE/wp-content"
-TMP_DISABLED="$WP_CONTENT/.wp-disabled"
+TMP_DISABLED="$WP_CONTENT/.wp-disabled-$$"
 
 mkdir -p "$TMP_DISABLED"
 
@@ -51,33 +48,58 @@ mkdir -p "$TMP_DISABLED"
 # Disable dangerous drop-ins
 # -----------------------------------
 
-[ -f "$WP_CONTENT/db.php" ] && mv "$WP_CONTENT/db.php" "$TMP_DISABLED/db.php"
-[ -f "$WP_CONTENT/object-cache.php" ] && mv "$WP_CONTENT/object-cache.php" "$TMP_DISABLED/object-cache.php"
-[ -f "$WP_CONTENT/advanced-cache.php" ] && mv "$WP_CONTENT/advanced-cache.php" "$TMP_DISABLED/advanced-cache.php"
-[ -f "$WP_CONTENT/sunrise.php" ] && mv "$WP_CONTENT/sunrise.php" "$TMP_DISABLED/sunrise.php"
+if [ -f "$WP_CONTENT/db.php" ]; then
+mv "$WP_CONTENT/db.php" "$TMP_DISABLED/db.php"
+fi
 
-# disable mu-plugins
-[ -d "$WP_CONTENT/mu-plugins" ] && mv "$WP_CONTENT/mu-plugins" "$TMP_DISABLED/mu-plugins"
+if [ -f "$WP_CONTENT/object-cache.php" ]; then
+mv "$WP_CONTENT/object-cache.php" "$TMP_DISABLED/object-cache.php"
+fi
+
+if [ -f "$WP_CONTENT/advanced-cache.php" ]; then
+mv "$WP_CONTENT/advanced-cache.php" "$TMP_DISABLED/advanced-cache.php"
+fi
+
+if [ -f "$WP_CONTENT/sunrise.php" ]; then
+mv "$WP_CONTENT/sunrise.php" "$TMP_DISABLED/sunrise.php"
+fi
+
+if [ -d "$WP_CONTENT/mu-plugins" ]; then
+mv "$WP_CONTENT/mu-plugins" "$TMP_DISABLED/mu-plugins"
+fi
 
 # -----------------------------------
 # Execute WP-CLI safely
 # -----------------------------------
 
-timeout 90 wp_exec "$SITE" "$@" --skip-plugins --skip-themes
+wp_exec "$SITE" "$@" --skip-plugins --skip-themes
 RESULT=$?
 
 # -----------------------------------
 # Restore disabled components
 # -----------------------------------
 
-[ -f "$TMP_DISABLED/db.php" ] && mv "$TMP_DISABLED/db.php" "$WP_CONTENT/db.php"
-[ -f "$TMP_DISABLED/object-cache.php" ] && mv "$TMP_DISABLED/object-cache.php" "$WP_CONTENT/object-cache.php"
-[ -f "$TMP_DISABLED/advanced-cache.php" ] && mv "$TMP_DISABLED/advanced-cache.php" "$WP_CONTENT/advanced-cache.php"
-[ -f "$TMP_DISABLED/sunrise.php" ] && mv "$TMP_DISABLED/sunrise.php" "$WP_CONTENT/sunrise.php"
+if [ -f "$TMP_DISABLED/db.php" ]; then
+mv "$TMP_DISABLED/db.php" "$WP_CONTENT/db.php"
+fi
 
-[ -d "$TMP_DISABLED/mu-plugins" ] && mv "$TMP_DISABLED/mu-plugins" "$WP_CONTENT/mu-plugins"
+if [ -f "$TMP_DISABLED/object-cache.php" ]; then
+mv "$TMP_DISABLED/object-cache.php" "$WP_CONTENT/object-cache.php"
+fi
 
-rm -rf "$TMP_DISABLED"
+if [ -f "$TMP_DISABLED/advanced-cache.php" ]; then
+mv "$TMP_DISABLED/advanced-cache.php" "$WP_CONTENT/advanced-cache.php"
+fi
+
+if [ -f "$TMP_DISABLED/sunrise.php" ]; then
+mv "$TMP_DISABLED/sunrise.php" "$WP_CONTENT/sunrise.php"
+fi
+
+if [ -d "$TMP_DISABLED/mu-plugins" ]; then
+mv "$TMP_DISABLED/mu-plugins" "$WP_CONTENT/mu-plugins"
+fi
+
+rmdir "$TMP_DISABLED" 2>/dev/null
 
 return $RESULT
 }
