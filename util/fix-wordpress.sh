@@ -20,7 +20,6 @@ UPLOADS="$SITE/wp-content/uploads"
 # ---------------------------------
 # Step 1: Malware cleanup
 # ---------------------------------
-
 echo "Step 1: Malware cleanup"
 
 rm -rf "$SITE/wp-content/mu-plugins" 2>/dev/null
@@ -29,24 +28,53 @@ rm -rf "$UPLOADS/.tmb" 2>/dev/null
 rm -f "$SITE/wp-content/db.php" 2>/dev/null
 rm -f "$SITE/wp-content/advanced-cache.php" 2>/dev/null
 rm -f "$SITE/wp-content/object-cache.php" 2>/dev/null
+rm -f "$SITE/wp-content/install.php" 2>/dev/null
+# remove known malicious upload folders
+rm -rf "$UPLOADS/wp-file-manager-pro" 2>/dev/null
+rm -rf "$UPLOADS/file-manager" 2>/dev/null
+rm -rf "$UPLOADS/wp-file-manager" 2>/dev/null
+rm -rf "$UPLOADS/pwned" 2>/dev/null
+rm -rf "$SITE/wp-content/plugins-old"* 2>/dev/null
+rm -rf "$SITE/wp-content/themes-old"* 2>/dev/null
+rm -rf "$SITE/wp-content/uploads-old"* 2>/dev/null
+rm -rf "$SITE/wp-content/mu-plugins-old"* 2>/dev/null
+rm -rf "$SITE/wp-content/endurance-page-cache" 2>/dev/null
+rm -rf "$SITE/wp-content/upgrade" 2>/dev/null
+rm -rf "$SITE/wp-content/upgrade-temp-backup" 2>/dev/null
+# remove hidden suspicious folders
+rm -rf "$SITE/.wp-temp" 2>/dev/null
+rm -rf "$SITE/.wp-cache" 2>/dev/null
+rm -rf "$SITE/.cache" 2>/dev/null
+rm -rf "$SITE/.backups" 2>/dev/null
+rm -rf "$SITE/.logs" 2>/dev/null
+rm -rf "$SITE/.old" 2>/dev/null
+rm -rf "$SITE/.trash" 2>/dev/null
+rm -rf "$SITE/.temp" 2>/dev/null
+rm -rf "$SITE/.htaccess_old" 2>/dev/null
+rm -rf "$SITE/.htaccess.bak" 2>/dev/null
+rm -rf "$SITE/.htaccess.backup" 2>/dev/null
+rm -rf "$SITE/.htaccess.bak" 2>/dev/null
+rm -rf "$SITE/.htaccess_old" 2>/dev/null
 
 # safer php deletion (avoid hostinger kill)
 if [ -d "$UPLOADS" ]; then
-  find "$UPLOADS" -type f -name "*.php" -exec rm -f {} \; 2>/dev/null
+  echo "Removing PHP files from uploads"
+  find "$UPLOADS" -type f -name "*.php" -print -delete 2>/dev/null
 fi
 
-find "$SITE" -type f -name "license.php" -exec rm -f {} \; 2>/dev/null
-find "$SITE" -type f -name "index1.php" -exec rm -f {} \; 2>/dev/null
+echo "Removing common malware files"
+find "$SITE" -maxdepth 3 -type f -name "license.php" -print -delete 2>/dev/null
+find "$SITE" -maxdepth 3 -type f -name "index1.php" -print -delete 2>/dev/null
 
 echo "Malware cleanup complete"
 
 # ---------------------------------
-# Step 2: Ensure .htaccess exists
+# Step 2: Resetting .htaccess exists
 # ---------------------------------
+echo "Resetting .htaccess"
+[ -f "$HTACCESS" ] && cp "$HTACCESS" "$HTACCESS.backup"
 
-if [ ! -f "$HTACCESS" ]; then
-  echo "Creating missing .htaccess"
-  cat > "$HTACCESS" <<EOF
+cat > "$HTACCESS" <<EOF
 # BEGIN WordPress
 RewriteEngine On
 RewriteBase /
@@ -56,7 +84,6 @@ RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule . /index.php [L]
 # END WordPress
 EOF
-fi
 
 # Block PHP execution inside uploads
 if [ -d "$UPLOADS" ]; then
@@ -112,12 +139,32 @@ if [ "$REG" == "1" ]; then
 fi
 
 # ---------------------------------
+# Step 6.1: Enabling automatic updates and updating all components
+# ---------------------------------
+echo "Enabling automatic updates"
+safe_wp "$SITE" config set WP_AUTO_UPDATE_CORE true --raw >/dev/null 2>&1
+safe_wp "$SITE" plugin auto-updates enable --all >/dev/null 2>&1
+safe_wp "$SITE" theme auto-updates enable --all >/dev/null 2>&1
+echo "Updating WordPress components"
+safe_wp "$SITE" core update >/dev/null 2>&1
+safe_wp "$SITE" plugin update --all >/dev/null 2>&1
+safe_wp "$SITE" theme update --all >/dev/null 2>&1
+
+# ---------------------------------
 # Step 7: Flush permalinks
 # ---------------------------------
 
 echo "Step 7: Flush permalinks"
 wp_exec "$SITE" rewrite flush --hard --skip-plugins --skip-themes
+if wp_exec "$SITE" plugin is-installed elementor >/dev/null 2>&1; then
+  echo "Refreshing Elementor cache"
+  wp_exec "$SITE" elementor flush_css >/dev/null 2>&1
+fi
 
+echo "Flushing WordPress cache"
+
+wp_exec "$SITE" transient delete --all >/dev/null 2>&1
+wp_exec "$SITE" cache flush >/dev/null 2>&1
 # ---------------------------------
 # Step 8: Clear cache
 # ---------------------------------
@@ -127,6 +174,9 @@ echo "Step 8: Clear cache directories"
 rm -rf "$SITE/wp-content/cache" 2>/dev/null
 rm -rf "$SITE/wp-content/litespeed" 2>/dev/null
 rm -rf "$UPLOADS/cache" 2>/dev/null
+rm -rf "$SITE/wp-content/endurance-page-cache" 2>/dev/null
+rm -rf "$SITE/wp-content/w3tc-cache" 2>/dev/null
+rm -rf "$SITE/wp-content/wp-rocket-cache" 2>/dev/null
 
 echo "================================="
 echo "WordPress repair complete"
