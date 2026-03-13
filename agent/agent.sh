@@ -464,6 +464,135 @@ echo
 echo "URL replacement complete"
 pause
 }
+
+manage_plugins(){
+
+SITE="$1"
+
+while true
+do
+
+clear
+echo "==============================="
+echo "PLUGINS"
+echo "==============================="
+
+wp --path="$SITE" plugin list --fields=name,status,version --format=table
+
+echo
+echo "1) Install Plugin"
+echo "2) Remove Plugins"
+echo "0) Back"
+echo
+
+read -p "Select option: " OPT
+
+case $OPT in
+
+1)
+
+read -p "Enter plugin slug OR URL: " INPUT
+
+if [[ "$INPUT" == https* ]]; then
+wp --path="$SITE" plugin install "$INPUT"
+else
+wp --path="$SITE" plugin install "$INPUT"
+fi
+
+pause
+;;
+
+2)
+
+echo
+wp --path="$SITE" plugin list --field=name
+echo
+
+read -p "Enter plugin names to remove (space separated): " PLUGINS
+
+for P in $PLUGINS
+do
+echo "Removing $P"
+
+wp --path="$SITE" plugin deactivate "$P" --skip-themes --skip-plugins 2>/dev/null
+wp --path="$SITE" plugin uninstall "$P" --skip-themes --skip-plugins 2>/dev/null
+
+rm -rf "$SITE/wp-content/plugins/$P"
+
+done
+
+pause
+;;
+
+0) return ;;
+
+esac
+
+done
+}
+
+manage_themes(){
+
+SITE="$1"
+
+while true
+do
+
+clear
+echo "==============================="
+echo "THEMES"
+echo "==============================="
+
+wp --path="$SITE" theme list --fields=name,status,version --format=table
+
+echo
+echo "1) Install Theme"
+echo "2) Remove Themes"
+echo "0) Back"
+echo
+
+read -p "Select option: " OPT
+
+case $OPT in
+
+1)
+
+read -p "Enter theme slug OR URL: " INPUT
+
+if [[ "$INPUT" == https* ]]; then
+wp --path="$SITE" theme install "$INPUT"
+else
+wp --path="$SITE" theme install "$INPUT"
+fi
+
+pause
+;;
+
+2)
+
+echo
+wp --path="$SITE" theme list --field=name
+echo
+
+read -p "Enter theme names to remove (space separated): " THEMES
+
+for T in $THEMES
+do
+echo "Removing $T"
+wp --path="$SITE" theme delete "$T" --skip-themes --skip-plugins 2>/dev/null
+rm -rf "$SITE/wp-content/themes/$T"
+done
+
+pause
+;;
+
+0) return ;;
+
+esac
+
+done
+}
+
 # ---------------- MAIN MENU ----------------
 
 while true
@@ -514,6 +643,8 @@ echo "7) Generate One-Time Admin Login Link"
 echo "8) Cleanup Admins (Keep Oldest)"
 echo "9) Manage Admins"
 echo "10) Replace Domain / Temporary URL"
+echo "11) Manage Themes"
+echo "12) Manage Plugins"
 echo "0) Back"
 echo
 
@@ -567,6 +698,10 @@ pause
 9) manage_admins "$SITE_PATH" ;;
 
 10) replace_url_only "$SITE_PATH" ;;
+
+11) manage_themes "$SITE_PATH" ;;
+
+12) manage_plugins "$SITE_PATH" ;;
 
 0) break ;;
 
