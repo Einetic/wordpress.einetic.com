@@ -477,7 +477,7 @@ echo "==============================="
 echo "PLUGINS"
 echo "==============================="
 
-wp --path="$SITE" plugin list --fields=name,status,version --format=table
+safe_wp "$SITE" plugin list --fields=name,status,version --format=table
 
 echo
 echo "1) Install Plugin"
@@ -494,9 +494,9 @@ case $OPT in
 read -p "Enter plugin slug OR URL: " INPUT
 
 if [[ "$INPUT" == https* ]]; then
-wp --path="$SITE" plugin install "$INPUT"
+safe_wp "$SITE" plugin install "$INPUT"
 else
-wp --path="$SITE" plugin install "$INPUT"
+safe_wp "$SITE" plugin install "$INPUT"
 fi
 
 pause
@@ -505,7 +505,7 @@ pause
 2)
 
 echo
-wp --path="$SITE" plugin list --field=name
+safe_wp "$SITE" plugin list --field=name
 echo
 
 read -p "Enter plugin names to remove (space separated): " PLUGINS
@@ -514,8 +514,8 @@ for P in $PLUGINS
 do
 echo "Removing $P"
 
-wp --path="$SITE" plugin deactivate "$P" --skip-themes --skip-plugins 2>/dev/null
-wp --path="$SITE" plugin uninstall "$P" --skip-themes --skip-plugins 2>/dev/null
+safe_wp "$SITE" plugin deactivate "$P" --skip-themes --skip-plugins 2>/dev/null
+safe_wp "$SITE" plugin uninstall "$P" --skip-themes --skip-plugins 2>/dev/null
 
 rm -rf "$SITE/wp-content/plugins/$P"
 
@@ -543,7 +543,7 @@ echo "==============================="
 echo "THEMES"
 echo "==============================="
 
-wp --path="$SITE" theme list --fields=name,status,version --format=table
+safe_wp "$SITE" theme list --fields=name,status,version --format=table
 
 echo
 echo "1) Install Theme"
@@ -560,9 +560,9 @@ case $OPT in
 read -p "Enter theme slug OR URL: " INPUT
 
 if [[ "$INPUT" == https* ]]; then
-wp --path="$SITE" theme install "$INPUT"
+safe_wp "$SITE" theme install "$INPUT"
 else
-wp --path="$SITE" theme install "$INPUT"
+safe_wp "$SITE" theme install "$INPUT"
 fi
 
 pause
@@ -571,7 +571,7 @@ pause
 2)
 
 echo
-wp --path="$SITE" theme list --field=name
+safe_wp "$SITE" theme list --field=name
 echo
 
 read -p "Enter theme names to remove (space separated): " THEMES
@@ -579,7 +579,7 @@ read -p "Enter theme names to remove (space separated): " THEMES
 for T in $THEMES
 do
 echo "Removing $T"
-wp --path="$SITE" theme delete "$T" --skip-themes --skip-plugins 2>/dev/null
+safe_wp "$SITE" theme delete "$T" --skip-themes --skip-plugins 2>/dev/null
 rm -rf "$SITE/wp-content/themes/$T"
 done
 
@@ -734,6 +734,8 @@ git fetch origin
 git reset --hard origin/master
 chmod +x agent/*.sh util/*.sh scripts/*.sh 2>/dev/null
 exec "$BASE_DIR/agent/agent.sh"
+echo "Press any key to continue..."
+pause
 ;;
 
 4) start_service ;;
