@@ -2,6 +2,7 @@
 
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 UTIL_DIR="$BASE_DIR/util"
+source "$UTIL_DIR/core.sh"
 SERVICE_TEMPLATE="$BASE_DIR/service/einetic-wp-fleet.service"
 TIMER_TEMPLATE="$BASE_DIR/service/einetic-wp-fleet.timer"
 
@@ -208,9 +209,9 @@ printf "%-40s" "$DOMAIN"
 case $ACTION in
 
 verify-all)
-wp --path="$SITE" core verify-checksums --skip-plugins --skip-themes >/dev/null 2>&1
+safe_wp "$SITE" core verify-checksums --skip-plugins --skip-themes >/dev/null 2>&1
 CORE_STATUS=$?
-wp --path="$SITE" plugin verify-checksums --all --skip-plugins --skip-themes >/dev/null 2>&1
+safe_wp "$SITE" plugin verify-checksums --all --skip-plugins --skip-themes >/dev/null 2>&1
 PLUGIN_STATUS=$?
 
 if [ $CORE_STATUS -eq 0 ] && [ $PLUGIN_STATUS -eq 0 ]; then
@@ -221,10 +222,10 @@ fi
 ;;
 
 update-all)
-wp --path="$SITE" core update --quiet
-wp --path="$SITE" plugin update --all --quiet
-wp --path="$SITE" theme update --all --quiet
-wp --path="$SITE" rewrite flush --hard --quiet
+safe_wp "$SITE" core update --quiet
+safe_wp "$SITE" plugin update --all --quiet
+safe_wp "$SITE" theme update --all --quiet
+safe_wp "$SITE" rewrite flush --hard --quiet
 echo "UPDATED"
 ;;
 
