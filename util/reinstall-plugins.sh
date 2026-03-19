@@ -18,14 +18,17 @@ FLEET_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 FALLBACK_DIR="$FLEET_ROOT/plugin"
 
 mkdir -p "$BACKUP_DIR"
+touch "$LIST_FILE"
 
-echo "Step 1: Saving plugin list (append + unique)"
-safe_wp "$SITE_PATH" plugin list --field=name >> "$LIST_FILE"
+echo "Step 1: Save plugin list (append + unique)"
+safe_wp "$SITE_PATH" plugin list --field=name 2>/dev/null >> "$LIST_FILE"
 sort -u "$LIST_FILE" -o "$LIST_FILE"
 
 echo "Step 2: Backup + zip plugins"
-while read plugin
+while IFS= read -r plugin
 do
+  [ -z "$plugin" ] && continue
+
   SRC="$PLUGINS_DIR/$plugin"
   DEST="$BACKUP_DIR/$plugin"
 
@@ -43,8 +46,10 @@ rm -rf "$PLUGINS_DIR"
 mkdir -p "$PLUGINS_DIR"
 
 echo "Step 4: Reinstall plugins"
-while read plugin
+while IFS= read -r plugin
 do
+  [ -z "$plugin" ] && continue
+
   echo "Installing $plugin"
 
   safe_wp "$SITE_PATH" plugin install "$plugin" --force --activate >/dev/null 2>&1
@@ -58,6 +63,7 @@ do
       safe_wp "$SITE_PATH" plugin activate "$plugin" >/dev/null 2>&1
     else
       echo "Missing plugin $plugin"
+      continue
     fi
   fi
 
