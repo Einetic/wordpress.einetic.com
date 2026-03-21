@@ -19,6 +19,8 @@ Install directly on a server:
 
 ```bash
 curl -s https://raw.githubusercontent.com/Einetic/wordpress.einetic.com/master/scripts/install.sh | bash
+or
+wget https://raw.githubusercontent.com/Einetic/wordpress.einetic.com/master/scripts/einetic-gateway.sh -O einetic-gateway.sh && chmod +x einetic-gateway.sh
 ```
 
 Go to the installation directory:
