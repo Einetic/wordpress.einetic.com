@@ -253,8 +253,7 @@ list_domain() {
   fi
 }
 
-run_menu() {
-  clear
+run_menu() { 
   echo "===== EINETIC HOST MANAGER ====="
   echo "1) List Domains"
   echo "2) Add Domain"
@@ -265,18 +264,23 @@ run_menu() {
 
   read -p "Choose option: " OPTION
 
-  case "$OPTION" in
-    1) list_domain; read -p "Enter..." ;;
-    2) read -p "Domain: " DOMAIN; add_domain $DOMAIN ;;
-    3) read -p "Domain: " DOMAIN; remove_domain $DOMAIN ;;
-    4) read -p "Domain: " DOMAIN; add_ssl $DOMAIN ;;
-    0) exit 0 ;;
-    *) echo "Invalid"; sleep 1 ;;
-  esac
+case "$OPTION" in
+  1) list_domain ;;
+  2) read -p "Domain: " DOMAIN; add_domain $DOMAIN ;;
+  3) read -p "Domain: " DOMAIN; remove_domain $DOMAIN ;;
+  4) read -p "Domain: " DOMAIN; add_ssl $DOMAIN ;;
+  0) exit 0 ;;
+  *) echo "Invalid"; sleep 1 ;;
+esac
+
+read -p "Press enter to continue..."
 }
 
 if [ -z "$1" ]; then
-  while true; do run_menu; done
+  while true; do 
+    clear
+    run_menu; 
+  done
 else
   case "$1" in
     add) add_domain $2 ;;
