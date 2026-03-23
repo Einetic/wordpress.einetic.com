@@ -665,7 +665,7 @@ pause
 ;;
 
 3)
-safe_wp "$SITE_PATH" core update --quiet
+wp_exec "$SITE_PATH" core download --skip-content --force >/dev/null 2>&1
 safe_wp "$SITE_PATH" plugin update --all --quiet
 safe_wp "$SITE_PATH" theme update --all --quiet
 safe_wp "$SITE_PATH" rewrite flush --hard --quiet
