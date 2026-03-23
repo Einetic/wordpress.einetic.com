@@ -665,10 +665,10 @@ pause
 ;;
 
 3)
-wp --path="$SITE_PATH" core update
-wp --path="$SITE_PATH" plugin update --all
-wp --path="$SITE_PATH" theme update --all
-wp --path="$SITE_PATH" rewrite flush --hard
+safe_wp "$SITE_PATH" core update --quiet
+safe_wp "$SITE_PATH" plugin update --all --quiet
+safe_wp "$SITE_PATH" theme update --all --quiet
+safe_wp "$SITE_PATH" rewrite flush --hard --quiet
 pause
 ;;
 
