@@ -88,7 +88,12 @@ EOF
 
   echo "Step 2: Reinstall WordPress core"
 
-  wp_exec "$SITE" core download --skip-content --force
+  wp_exec "$SITE" core download --skip-content --force >/dev/null 2>&1
+
+  if [ ! -f "$SITE/wp-includes/version.php" ]; then
+    echo "Core installation failed"
+    exit 1
+  fi
 
   # ---------------------------------
   # Step 4: Reinstall plugins
